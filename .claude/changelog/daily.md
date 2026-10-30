@@ -1,40 +1,28 @@
 # Daily Changelog — Busora
 
-## 2026-10-30
+## 2026-10-31
 
-- Phase 0: created the monorepo from the `dev` branches of the Busreisen API
-  and admin dashboard, with clean history (untracked files, `.git`, and the
-  old `.claude` folders were not carried over).
-- Replaced the real carrier's legal details on tickets with fictional Busora
-  values: company name, licence, addresses, phones, EDRPOU code and insurer
-  (in `languages/*/_ticket.js`, `views/full-ticket.pug` and
-  `views/ticket-terms-of-use/*.pug`). This was done before the first commit so
-  they never enter history.
-- Removed production-only files: deploy runbooks, the staging
-  compose/Caddyfile/env, both deploy workflows and scripts, the children
-  migration plan, and the dead `api/index-base.js` and `config/constants.js`.
-- [DECISION] Monorepo with `apps/api`, `apps/admin`, `apps/web` and `infra/`.
-  MySQL only. Mock payment provider by default. Locales are uk/cs/en. UAH stays
-  the stored truth, with CZK as the display currency. Hosting is local Compose
-  plus a public demo. See `docs/PLAN.md`.
-- Phase 1 (partial, commit `bbd3cc1`): Husky and lint-staged moved to the repo
-  root. Each app keeps its own `.lintstagedrc.json`, and lint-staged runs each
-  file's closest config from that app's directory. Running the hook needs
-  `npm ci` in every app.
-- Phase 1: wrote `infra/docker-compose.dev.yml` (MySQL 8 on host port **3307**,
-  because a local MySQL80 service owns 3306; Redis; Mailpit on 1025/8025).
-  `.env.example` now targets that stack, and the project is MySQL only (`pg`
-  removed).
-- Fixed: `DB_PORT` was never passed to Sequelize; `MAIL_SECURE="false"` was
-  truthy and forced TLS; dev mode crashed without `localhost.pem` (HTTPS is now
-  opt-in through `DEV_HTTPS_*_PATH`); npm scripts used the cmd-only `set`.
-- [DECISION] Required rows (languages uk_UA=1, cs_CZ=2, en_US=3 and the
-  ticketmeta rows in uk/cs/en) live in migration
-  `20261030000002-reference-data.js`, not in seeders. That way
-  `npm run migrate` alone produces a working database.
-- Removed the `tickets.children` JSON column from the model. Every code path
-  already used `passengertickets`.
-- Blocked: Docker is not installed on this machine. Still to do in Phase 1:
-  run `database/tools/generate-baseline.sh`, write the baseline migration
-  `20261030000001`, delete the 57 inherited migrations, and verify that
-  migrate and boot work on an empty database.
+- Phase 1 complete. The 59 inherited migrations are replaced by
+  `20261030000001-baseline-schema.js` (25 tables in foreign-key order, plus the
+  two `passengerRowCount` triggers), followed by `20261030000002-reference-data.js`.
+- Verified on the dev Compose stack:
+  - `npm run migrate` on an empty `busora_dev` succeeds.
+  - Compared through `information_schema`, the resulting schema is identical
+    to what the old chain produced, minus `tickets.children`: 193 columns, 89
+    index entries, 37 FK columns, 2 triggers, plus each column's
+    charset/collation.
+  - The API boots: cities and currencies return 200 with empty data, Swagger
+    loads, and Redis is used for sessions.
+  - Admin register → activation email in Mailpit → link → activated.
+- Fixed: `sequelize-cli` never registered the `@helpers` module aliases, so
+  migrations that imported constants crashed. `.sequelizerc` now loads
+  `module-alias/register`.
+- Found in the old chain (now moot): `20250912040507` (ticketmetaattributes)
+  sorted before the `ticketmeta` table it references. The chain could not run
+  on an empty DB in order.
+- Inherited quirk kept as-is: `tickets.statusId` and `tickets.typeId` each have
+  two FKs to `ticketmeta`, one RESTRICT and one SET NULL. In effect, deleting a
+  ticketmeta row in use is blocked.
+- Docker needed Windows' Virtual Machine Platform enabled plus a reboot.
+  Firmware virtualization was already on.
+- Phase 1 check note: cities are empty until the Phase 6 seeders.

@@ -1,3 +1,6 @@
+// Migrations and seeders import through the package.json aliases (@helpers…),
+// which sequelize-cli does not register on its own.
+require('module-alias/register');
 const path = require('path');
 
 module.exports = {
