@@ -1352,7 +1352,6 @@ router.get(
           "id",
           "signature",
           "PDFFileName",
-          "children",
           "dateOfDeparture",
           "dateOfReturn",
           "typeId",
@@ -1535,9 +1534,8 @@ router.post(
 
       console.log('perPassengerResults: ', perPassengerResults);
 
-      // Write the new PDF filenames back to the database:
-      //  - adults → PassengerTicket.PDFFileName
-      //  - children → pdfFileName property inside ticket.children JSON
+      // Write the new PDF filenames back to PassengerTicket.PDFFileName
+      // (adults and children alike)
       await persistPerPassengerPDFs(ticket, perPassengerResults);
 
       return res.json({
@@ -2050,19 +2048,6 @@ router.put(
         discountPercentage: discountPercentageValue,
         originId: origin?.id,
         destinationId: destination?.id
-        // "children": JSON.stringify(children.reduce((acc, curr, ind) => {
-        //     acc["child-passenger-" + (ind + passengers.length + 1)] = {
-        //         ["name-" + (ind + passengers.length + 1)]: curr?.name,
-        //         ["last-name-" + (ind + passengers.length + 1)]: curr?.lastName,
-        //         ["date-of-birth-" + (ind + passengers.length + 1)]: Date.parse(curr?.dateOfBirth),
-        //         ["discount-" + (ind + passengers.length + 1)]: curr?.passengerDiscount?.id,
-        //         ["discount-percentage-" + (ind + passengers.length + 1)]: curr?.passengerDiscount?.percentage,
-        //         ["discount-name-" + (ind + passengers.length + 1)]: curr?.passengerDiscount?.name,
-        //         // ['full-ticket-price-'+ (ind + 1)]: curr?.passengerDiscount?.name,
-        //         // ['discount-ticket-price-'+ (ind + 1)]: curr?.passengerDiscount?.name,
-        //     };
-        //     return acc;
-        // }, {})),
       });
       const queryOpts = {
         where: {

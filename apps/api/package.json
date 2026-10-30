@@ -1,17 +1,12 @@
 {
-  "name": "backend",
+  "name": "busora-api",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "set NODE_ENV=development&& nodemon index.js",
-    "start": "set NODE_ENV=production&& node index.js",
-    "start:prod": "pm2 start ecosystem.config.js --env production",
-    "stop:prod": "pm2 stop busreisen",
-    "restart:prod": "pm2 restart busreisen",
-    "logs:prod": "pm2 logs busreisen",
+    "dev": "nodemon index.js",
+    "start": "node index.js",
     "test": "node --test",
-    "dev-debug": "set NODE_ENV=development&& set DEBUG=*&& nodemon index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,json,md}\"",
@@ -19,16 +14,13 @@
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "seed": "sequelize-cli db:seed:all",
-    "audit:security": "npm audit --production",
-    "prepare": "husky || true"
+    "audit:security": "npm audit --production"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "eslint": "^9.13.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.2.11",
     "nodemon": "^2.0.21",
     "prettier": "^3.3.3",
     "sequelize-cli": "^6.6.2"
@@ -56,7 +48,6 @@
     "node-fetch": "^2.6.9",
     "nodemailer": "^6.9.4",
     "pdfkit": "^0.13.0",
-    "pg": "^8.11.3",
     "pug": "^3.0.2",
     "qrcode": "^1.5.3",
     "redis": "^4.6.7",

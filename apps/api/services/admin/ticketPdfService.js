@@ -751,10 +751,8 @@ const generatePerPassengerPDFs = async (ticket, passengerId = null) => {
 /**
  * Persists per-passenger PDF filenames to the database after generation.
  *
- * For adult passengers: updates PDFFileName on the PassengerTicket row.
- * For children: patches pdfFileName into the child's entry inside the
- * ticket.children JSON blob and saves it back in a single Ticket.update
- * call (rather than one update per child).
+ * Updates PDFFileName on each passenger's PassengerTicket row (adults and
+ * children alike).
  *
  * Separation of concerns: this function only does DB writes. The file
  * generation and old-file cleanup live in generatePerPassengerPDFs.

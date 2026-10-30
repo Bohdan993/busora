@@ -146,10 +146,6 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id'
         }
       },
-      children: {
-        type: DataTypes.JSON,
-        allowNull: true
-      },
       PDFFileName: {
         type: DataTypes.STRING(64),
         unique: true,

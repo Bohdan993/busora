@@ -40,26 +40,19 @@ const {
 
 const app = express();
 
-const keyCertPath =
-  process.env.NODE_ENV === 'development'
-    ? path.resolve(__dirname, '../../localhost-key.pem')
-    : null;
-
-const certPath =
-  process.env.NODE_ENV === 'development'
-    ? path.resolve(__dirname, '../../localhost.pem')
-    : null;
-const key =
-  process.env.NODE_ENV === 'development'
-    ? fs.readFileSync(keyCertPath, 'utf-8')
-    : null;
-const cert =
-  process.env.NODE_ENV === 'development'
-    ? fs.readFileSync(certPath, 'utf-8')
-    : null;
+// HTTPS is opt-in for local development: set both cert paths to enable it.
+// Without them (e.g. inside Docker, behind a proxy) the API serves plain HTTP.
+const httpsKeyPath = process.env.DEV_HTTPS_KEY_PATH;
+const httpsCertPath = process.env.DEV_HTTPS_CERT_PATH;
 const server =
-  process.env.NODE_ENV === 'development'
-    ? https.createServer({ key: key, cert: cert }, app)
+  process.env.NODE_ENV === 'development' && httpsKeyPath && httpsCertPath
+    ? https.createServer(
+        {
+          key: fs.readFileSync(path.resolve(httpsKeyPath), 'utf-8'),
+          cert: fs.readFileSync(path.resolve(httpsCertPath), 'utf-8')
+        },
+        app
+      )
     : null;
 
 logger.info(server ? 'HTTPS server created' : 'HTTP server created');
@@ -242,7 +235,7 @@ app.use(handleError);
 
 async function start() {
   try {
-    if (process.env.NODE_ENV === 'development') {
+    if (server) {
       server.listen(PORT, () => {
         logger.info(`🚀 Development server (HTTPS) running on port ${PORT}`);
         logger.info(`Environment: ${process.env.NODE_ENV}`);
@@ -250,7 +243,7 @@ async function start() {
       });
     } else {
       app.listen(PORT, () => {
-        logger.info(`🚀 Production server (HTTP) running on port ${PORT}`);
+        logger.info(`🚀 Server (HTTP) running on port ${PORT}`);
         logger.info(`Environment: ${process.env.NODE_ENV}`);
         logger.info(`Session store: ${redisStore ? 'Redis' : 'Memory'}`);
       });
