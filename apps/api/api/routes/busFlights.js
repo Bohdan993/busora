@@ -25,15 +25,13 @@ const {
   transformBusFlights,
   getAvailableDates,
   filterBusFlightsWithFreeSeats,
-  customRoutesFilter,
   createEmptyBusFlightLikeObj
 } = require('@services/busFlightService');
 const { checkIfSessionIsStarted } = require('@middlewares/sessionMiddlewares');
 
 const constants = require('@helpers/constants.js');
-const { customRoutesFilterMap } = require('@extra');
 const APIError = require('@exeptions/api-error');
-const { getCurrencyExchangeRate } = require('@services/paymentService');
+const { getExchangeRate } = require('@services/exchangeRates');
 
 /**
  * @swagger
@@ -146,6 +144,7 @@ router.get('/', validateDates, async (req, res, next) => {
     });
 
     currency = currency?.toJSON();
+    if (!currency) throw APIError.BadRequestError('Unknown currency');
 
     let query = {
       attributes: ['id', 'allSeats', 'freeSeats', 'routeId', 'dateOfDeparture'],
@@ -223,8 +222,7 @@ router.get('/', validateDates, async (req, res, next) => {
       originId,
       destinationId,
       startDate,
-      endDate,
-      customRoutesFilter
+      endDate
     });
 
     if (!filteredBusFlights?.resultFrom?.length) {
@@ -351,6 +349,10 @@ router.get('/', validateDates, async (req, res, next) => {
       languageId: lang?.id
     });
 
+    // Resolve before regenerate: an error thrown inside its callback would
+    // escape this try/catch and never reach the error handler.
+    const currencyExchangeRate = await getExchangeRate(currency?.abbr);
+
     return req.session.regenerate(async function (err) {
       if (err) return next(err);
 
@@ -358,8 +360,7 @@ router.get('/', validateDates, async (req, res, next) => {
       req.session.startDate = startDate;
       req.session.endDate = endDate;
       req.session.currency = currency;
-      req.session.currencyExchangeRate =
-        await getCurrencyExchangeRate(currency);
+      req.session.currencyExchangeRate = currencyExchangeRate;
       req.session.adults = adults;
       req.session.children = children;
       req.session.originId = originId;
@@ -508,23 +509,14 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
 
       currency = currency?.toJSON();
     }
+    if (!currency) throw APIError.BadRequestError('Unknown currency');
 
     const error404Translations = loadLanguageFile(
       '_404-error-no-alternative-tickets.js',
       lang?.code
     );
 
-    let limit = constants.LIMIT_OF_ALTERNATIVE_BUS_FLIGHTS;
-
-    if (
-      customRoutesFilterMap.hasOwnProperty(parseInt(originId)) ||
-      customRoutesFilterMap.hasOwnProperty(parseInt(destinationId))
-    ) {
-      const key = customRoutesFilterMap.hasOwnProperty(parseInt(originId))
-        ? parseInt(originId)
-        : parseInt(destinationId);
-      limit = limit * (customRoutesFilterMap[key].length + 1);
-    }
+    const limit = constants.LIMIT_OF_ALTERNATIVE_BUS_FLIGHTS;
 
     let query = {
       attributes: ['id', 'allSeats', 'freeSeats', 'routeId', 'dateOfDeparture'],
@@ -604,7 +596,6 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
       destinationId,
       startDate,
       endDate,
-      customRoutesFilter,
       isAlternativeBusFlights: true
     });
 
@@ -793,6 +784,9 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
       !req.session?.selectedBusFlight?.isSelected &&
       direction === constants.FORWARDS
     ) {
+      // Resolve before regenerate (see the search route above).
+      const currencyExchangeRate = await getExchangeRate(currency?.abbr);
+
       return req.session.regenerate(async function (err) {
         if (err) return next(err);
 
@@ -804,8 +798,7 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
         req.session.startDate = startDate;
         req.session.endDate = endDate;
         req.session.currency = currency;
-        req.session.currencyExchangeRate =
-          await getCurrencyExchangeRate(currency);
+        req.session.currencyExchangeRate = currencyExchangeRate;
         req.session.adults = adults;
         req.session.children = children;
         req.session.originId = originId;

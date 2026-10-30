@@ -1,7 +1,6 @@
 /** @format */
 
 const { Op } = require('sequelize');
-const { customRoutesFilterMap } = require('@extra');
 const {
   isSpecialDate,
   transformDate,
@@ -244,85 +243,6 @@ function pairFlightsByRouteGroup(primaryFlights, secondaryFlights) {
 }
 
 /**
- * Determines filter key for custom routes filtering
- * @param {number|string} originId - Origin city ID
- * @param {number|string} destinationId - Destination city ID
- * @param {string} endDate - End date
- * @returns {number|null} - Filter key or null
- */
-function getCustomRouteFilterKey(originId, destinationId, endDate) {
-  const parsedOriginId = parseInt(originId);
-  const parsedDestinationId = parseInt(destinationId);
-
-  if (customRoutesFilterMap.hasOwnProperty(parsedOriginId)) {
-    return parsedOriginId;
-  }
-
-  if (
-    customRoutesFilterMap.hasOwnProperty(parsedDestinationId) &&
-    !isSpecialDate(endDate)
-  ) {
-    return parsedDestinationId;
-  }
-
-  return null;
-}
-
-/**
- * Determines filter key for one-way custom routes filtering
- * @param {number|string} originId - Origin city ID
- * @param {number|string} destinationId - Destination city ID
- * @param {string} endDate - End date
- * @returns {number|null} - Filter key or null
- */
-function getOneWayCustomRouteFilterKey(originId, destinationId, endDate) {
-  const parsedOriginId = parseInt(originId);
-  const parsedDestinationId = parseInt(destinationId);
-
-  if (customRoutesFilterMap.hasOwnProperty(parsedOriginId)) {
-    return parsedOriginId;
-  }
-
-  if (
-    customRoutesFilterMap.hasOwnProperty(parsedDestinationId) &&
-    isSpecialDate(endDate)
-  ) {
-    return parsedDestinationId;
-  }
-
-  return null;
-}
-
-/**
- * Checks if flight should be kept based on route group ID filtering
- * @param {number} filterKey - Filter key from customRoutesFilterMap
- * @param {Object} flight - Bus flight object
- * @returns {boolean} - True if flight should be kept
- */
-function shouldKeepFlight(filterKey, flight) {
-  const routeGroupId = getRouteGroupId(flight);
-  return !customRoutesFilterMap[filterKey].includes(routeGroupId);
-}
-
-/**
- * Applies custom route filtering to flight results
- * @param {Object} results - Results object with resultFrom and resultTo
- * @param {number} filterKey - Filter key for customRoutesFilterMap
- * @param {boolean} isRoundTrip - Whether to filter both directions
- * @returns {Object} - Filtered results
- */
-function applyCustomRouteFiltering(results, filterKey, isRoundTrip = true) {
-  const filterFn = (flight) => shouldKeepFlight(filterKey, flight);
-
-  const filteredResults = {
-    resultFrom: results.resultFrom.filter(filterFn),
-    resultTo: isRoundTrip ? results.resultTo.filter(filterFn) : results.resultTo
-  };
-
-  return filteredResults;
-}
-
-/**
  * Checks if a direction supports travel between cities for available dates
  * @param {Object} busFlight - Bus flight object
  * @param {number|string} originCityId - Origin city ID
@@ -371,7 +291,6 @@ function filterBusFlights({
   destinationId,
   startDate,
   endDate,
-  customRoutesFilter = (arg) => arg,
   isAlternativeBusFlights = false
 } = {}) {
   // Early return for invalid input
@@ -403,19 +322,14 @@ function filterBusFlights({
     isAlternativeBusFlights
   );
 
-  let result = {
+  const result = {
     resultFrom: dateFilteredFrom,
     resultTo: dateFilteredTo
   };
 
-  // Apply route selection and custom filtering
+  // Round trips pair each outbound flight with a return on the same route group
   if (!isSpecialDate(endDate) && !isAlternativeBusFlights) {
-    result = selectBusFlights(
-      result,
-      customRoutesFilter.bind(null, originId, destinationId, endDate)
-    );
-  } else {
-    result = customRoutesFilter(originId, destinationId, endDate, result);
+    return selectBusFlights(result);
   }
 
   return result;
@@ -424,10 +338,9 @@ function filterBusFlights({
 /**
  * Selects and pairs bus flights by route group for round trips
  * @param {Object} data - Data object with resultFrom and resultTo arrays
- * @param {Function} customRouteFilter - Custom filtering function
  * @returns {Object} - Object with paired resultFrom and resultTo
  */
-function selectBusFlights(data, customRouteFilter = (arg) => arg) {
+function selectBusFlights(data) {
   if (!data?.resultFrom?.length || !data?.resultTo?.length) {
     return { resultFrom: [], resultTo: [] };
   }
@@ -453,103 +366,7 @@ function selectBusFlights(data, customRouteFilter = (arg) => arg) {
     result = pairFlightsByRouteGroup(fromFlights, toFlights);
   }
 
-  // console.log("Paired bus flights", {
-  //   result: customRouteFilter(result),
-  // });
-
-  // Apply custom filtering
-  return customRouteFilter(result);
-}
-
-/**
- * Applies custom route filtering based on city-specific rules
- * Single Responsibility: Handles custom route exclusions
- * @param {number|string} originId - Origin city ID
- * @param {number|string} destinationId - Destination city ID
- * @param {string} endDate - End date string
- * @param {Object} results - Results object to filter
- * @returns {Object} - Filtered results
- */
-function customRoutesFilter(originId, destinationId, endDate, results) {
-  if (!results?.resultFrom?.length) {
-    return results;
-  }
-
-  // Handle round trip filtering
-  const roundTripFilterKey = getCustomRouteFilterKey(
-    originId,
-    destinationId,
-    endDate
-  );
-  if (roundTripFilterKey) {
-    // Only apply filter if there are routes that should be kept
-    if (
-      results.resultFrom.some((flight) =>
-        shouldKeepFlight(roundTripFilterKey, flight)
-      )
-    ) {
-      return applyCustomRouteFiltering(results, roundTripFilterKey, true);
-    }
-    return results;
-  }
-
-  // Handle one-way trip filtering
-  const oneWayFilterKey = getOneWayCustomRouteFilterKey(
-    originId,
-    destinationId,
-    endDate
-  );
-  if (oneWayFilterKey) {
-    // Only apply filter if there are routes that should be kept
-    if (
-      results.resultFrom.some((flight) =>
-        shouldKeepFlight(oneWayFilterKey, flight)
-      )
-    ) {
-      return applyCustomRouteFiltering(results, oneWayFilterKey, false);
-    }
-    return results;
-  }
-
-  return results;
-}
-
-/**
- * Applies the shared-city route-group exclusion (customRoutesFilterMap) to a
- * FLAT list of flights — as opposed to the paired resultFrom/resultTo shape the
- * booking flow uses. Some cities sit on more than one route group (e.g. Дрезден
- * / 12, which is on both the Düsseldorf and Munich lines); when such a city is
- * the selected origin or destination, the configured non-canonical route
- * group(s) are dropped so the same city pair isn't offered by an ambiguous
- * duplicate line.
- *
- * Mirrors customRoutesFilter's safety guard: if the exclusion would remove every
- * flight, the list is returned unchanged.
- *
- * @param {Array} flights - Flat array of bus-flight JSON objects (route.routePath loaded)
- * @param {number|string} originId - Selected origin city ID
- * @param {number|string} destinationId - Selected destination city ID
- * @returns {Array} - Filtered flights
- */
-function filterFlatFlightsByCustomRouteGroup(flights, originId, destinationId) {
-  if (!Array.isArray(flights) || flights.length === 0) return flights;
-
-  const parsedOrigin = parseInt(originId);
-  const parsedDestination = parseInt(destinationId);
-  // Origin takes priority, then destination — matching the existing
-  // getCustomRouteFilterKey / getOneWayCustomRouteFilterKey precedence.
-  const filterKey = customRoutesFilterMap.hasOwnProperty(parsedOrigin)
-    ? parsedOrigin
-    : customRoutesFilterMap.hasOwnProperty(parsedDestination)
-      ? parsedDestination
-      : null;
-
-  if (filterKey === null) return flights;
-  // Never empty the list: only exclude when at least one flight survives.
-  if (!flights.some((flight) => shouldKeepFlight(filterKey, flight))) {
-    return flights;
-  }
-  return flights.filter((flight) => shouldKeepFlight(filterKey, flight));
+  return result;
 }
 
 /**
@@ -1210,7 +1027,6 @@ function transformBusFlightsTableKey(key) {
 
 module.exports = {
   createEmptyBusFlightLikeObj,
-  customRoutesFilter,
   filterBusFlights,
   filterBusFlightsAvailableDates,
   getAvailableDates,
@@ -1229,11 +1045,8 @@ module.exports = {
   parseRoutePath,
   routeSupportsTravel,
   supportsDirection,
-  filterFlatFlightsByCustomRouteGroup,
   processForwardDirectionFlights,
   processReturnDirectionFlights,
   pairFlightsByRouteGroup,
-  shouldKeepFlight,
-  applyCustomRouteFiltering,
   hasActualDiscount
 };

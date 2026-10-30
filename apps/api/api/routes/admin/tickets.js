@@ -53,10 +53,8 @@ const {
   transformTimestampToDate,
   transformDate
 } = require('@helpers');
-const {
-  strToSign,
-  getCurrencyExchangeRate
-} = require('@services/paymentService');
+const { strToSign } = require('@services/paymentService');
+const { getExchangeRate } = require('@services/exchangeRates');
 const { sendFileMail, getTicketSubject } = require('@services/mailService');
 const {
   resolveMetaId,
@@ -91,12 +89,12 @@ const router = Router();
 // These helpers resolve the UAH truth from the request and derive booking from it.
 
 // Resolve the UAH-per-1-unit rate for a currency: UAH → 1, otherwise the live
-// PrivatBank rate. A lookup failure falls back (to the ticket's locked rate or
-// 1) so a flaky rate API never blocks an edit.
+// NBU rate. A lookup failure falls back (to the ticket's locked rate or 1) so a
+// flaky rate API never blocks an edit.
 async function resolveCurrencyRate(currency, fallback = 1) {
   if (!currency || String(currency).toUpperCase() === 'UAH') return 1;
   try {
-    return await getCurrencyExchangeRate({ abbr: currency });
+    return await getExchangeRate(String(currency).toUpperCase());
   } catch {
     return Number(fallback) || 1;
   }

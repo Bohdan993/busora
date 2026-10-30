@@ -65,7 +65,6 @@
     "@controllers": "./controllers",
     "@database": "./database",
     "@exeptions": "./exeptions",
-    "@extra": "./extra",
     "@helpers": "./helpers",
     "@languages": "./languages",
     "@middlewares": "./middlewares",

@@ -31,7 +31,7 @@ const {
   getMetaNameById,
   getMetaIdByKey
 } = require('@services/ticketMetaService');
-const { getCurrencyExchangeRate } = require('@services/paymentService');
+const { getExchangeRate } = require('@services/exchangeRates');
 
 // Base Chrome flags. Note: NO fixed --user-data-dir here. A shared profile dir
 // is what caused the 2026-07-10 outage: a render that hung on navigation left a
@@ -283,19 +283,24 @@ async function createTicket({
 } = {}) {
   const { currency: currencyAbbr, amount: price } = JSON.parse(data);
 
-  // Lock the UAH exchange rate at booking time (UAH → 1, EUR → live rate). The
+  // Lock the UAH exchange rate at booking time (UAH → 1, CZK → live rate). The
   // ticket is stored in its display currency; priceUAH is the canonical UAH
   // amount used by the backend/admin/reporting. Never let a rate-lookup failure
-  // block ticket creation (this runs after payment) — fall back to 1. The caller
-  // may pass a pre-resolved rate (admin create already fetched it to convert the
-  // UAH inputs) so the same rate drives the stored price and priceUAH.
+  // block ticket creation (this runs after payment) — fall back to 1 and warn,
+  // since priceUAH is then wrong for a non-UAH ticket. The caller may pass a
+  // pre-resolved rate (admin create already fetched it to convert the UAH
+  // inputs) so the same rate drives the stored price and priceUAH.
   let exchangeRate = 1;
   if (exchangeRateOverride != null) {
     exchangeRate = Number(exchangeRateOverride) || 1;
   } else {
     try {
-      exchangeRate = await getCurrencyExchangeRate({ abbr: currencyAbbr });
-    } catch {
+      exchangeRate = await getExchangeRate(currencyAbbr);
+    } catch (err) {
+      logger.warn('Exchange rate unavailable at ticket creation; using 1', {
+        currency: currencyAbbr,
+        error: err.message
+      });
       exchangeRate = 1;
     }
   }

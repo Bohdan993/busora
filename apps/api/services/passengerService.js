@@ -1,6 +1,7 @@
 /** @format */
 
 const validate = require('validate.js');
+const { PHONE_PATTERN } = require('@root/config/market');
 const sequelize = require('@database/models/index').sequelize;
 const { Op } = require('sequelize');
 const {
@@ -213,7 +214,7 @@ async function createValidateConstraints(
       if (additionalPhoneRegex.test(key) && dataToValidate[key] !== '') {
         constraints[key] = {
           format: {
-            pattern: /^\+380([5-9][0-9]\d{7})$|^\+49(\d{10,11})$/,
+            pattern: PHONE_PATTERN,
             message: `^${translations?.validationErrors?.['1']}`
           },
           numericality: {
@@ -230,7 +231,7 @@ async function createValidateConstraints(
             message: `^${translations?.validationErrors?.['3']}`
           },
           format: {
-            pattern: /^\+380([5-9][0-9]\d{7})$|^\+49(\d{10,11})$/,
+            pattern: PHONE_PATTERN,
             message: `^${translations?.validationErrors?.['1']}`
           },
           numericality: {

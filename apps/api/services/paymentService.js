@@ -1,5 +1,4 @@
 const crypto = require('crypto');
-const fetch = require('node-fetch');
 
 function calculatePrice({ data } = {}) {
   const passengersData = Object.entries(data || []);
@@ -13,21 +12,6 @@ function calculatePrice({ data } = {}) {
   }
 
   return calculatedPrice;
-}
-
-async function getCurrencyExchangeRate(currency = {}) {
-  const currenciesExchangeUrl =
-    'https://api.privatbank.ua/p24api/pubinfo?exchange&json&coursid=11';
-  if (String(currency?.abbr) !== 'UAH') {
-    const currenciesExchangeResponse = await fetch(currenciesExchangeUrl);
-    const currenciesExchangeData = await currenciesExchangeResponse.json();
-    const currencyExchangeObj = currenciesExchangeData?.find(
-      (el) => String(el?.ccy) === String(currency?.abbr)
-    );
-    return (currencyExchangeObj?.sale && Number(currencyExchangeObj.sale)) || 1;
-  }
-
-  return 1;
 }
 
 function strToSign(str) {
@@ -109,7 +93,6 @@ function preparePassengerDataForEmail(passengersInfo) {
 
 module.exports = {
   calculatePrice,
-  getCurrencyExchangeRate,
   strToSign,
   parsePaymentCallbackData,
   preparePassengerDataForEmail

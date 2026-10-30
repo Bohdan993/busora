@@ -23,6 +23,7 @@ const {
   checkIfPassengersInfoExists
 } = require('@middlewares/passengersMiddleware');
 const constants = require('@helpers/constants.js');
+const { getPaymentLanguage } = require('@root/config/market');
 const { session: Session, ticket: Ticket } = require('@database/models/index');
 const { createTicket } = require('@services/ticketService');
 const {
@@ -162,7 +163,7 @@ router.post(
         order_id: infoDataSignature,
         version: '3',
         paytypes: 'card, liqpay, qr',
-        language: languageCode === 'de_DE' ? 'en' : languageCode.split('_')[0],
+        language: getPaymentLanguage(languageCode),
         info: infoObjString,
         sender_first_name: `(${firstPassanegerPhoneNum}) ${firstPassanegerName}`,
         sender_last_name: `(${email}) ${firstPassanegerLastName}`,
@@ -204,8 +205,7 @@ router.post(
           data,
           signature,
           translations: loadLanguageFile('payment-widget.js', languageCode),
-          language:
-            languageCode === 'de_DE' ? 'en' : languageCode.split('_')[0],
+          language: getPaymentLanguage(languageCode),
           linkToMain:
             languageCode === 'uk_UA' ? '/' : languageCode.split('_')[0]
         });
