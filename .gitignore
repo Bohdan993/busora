@@ -1,0 +1,30 @@
+# Dependencies & builds
+node_modules/
+build/
+.next/
+coverage/
+
+# Env files — only *.example files are committed
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local certificates
+*.pem
+
+# Logs & generated output
+logs/
+*.log
+apps/api/assets/tickets/
+
+# Database dumps — never commit
+*.sql
+*.sql.gz
+
+# Tooling artifacts
+.playwright-mcp/
+graphify-out/
+.DS_Store
+.idea/
+.vscode/

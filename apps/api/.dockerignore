@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+logs/*.log
+.git
+.gitignore
+.env
+.env.*.local
+originalCode
+postman
+documentation
+*.md
+assets/tickets/*.pdf
+.vscode
+.idea

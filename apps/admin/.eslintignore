@@ -1,0 +1,9 @@
+# .eslintignore
+dist
+build
+node_modules/
+
+# Root build/config scripts aren't part of the TS project, so the type-aware
+# parser (parserOptions.project) can't lint them — exclude to avoid parse errors.
+/webpack.config.js
+*.config.js

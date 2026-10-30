@@ -1,0 +1,6 @@
+# Build output / deps / generated — not hand-formatted source.
+node_modules
+build
+dist
+coverage
+package-lock.json

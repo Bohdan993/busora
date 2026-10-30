@@ -1,0 +1,7 @@
+# Shell scripts must stay LF — they run on the Linux CI runner / VM, and a CRLF
+# line ending breaks the shebang and `\r`-terminated commands.
+*.sh text eol=lf
+bin/ci-deploy.sh text eol=lf
+
+# Git hooks are shell scripts too — CRLF would break them on commit.
+.husky/pre-commit text eol=lf

@@ -1,0 +1,503 @@
+div.ticket-bus-container
+  style.
+    .ticket-bus {
+    margin: auto;
+    max-width: 414px;
+    background: #ffffff;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 100%;
+    border-radius: 30px;
+    -webkit-box-shadow: 2px 2px 40px #d6d6d6;
+    box-shadow: 2px 2px 40px #d6d6d6;
+    padding-top: 0;
+    overflow: hidden;
+    position: relative;
+    }
+    .ticket-bus-inner {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    padding: 15px 25px;
+    background: #fff;
+    border-radius: 6px;
+    /* height: calc(100% - 94px); */
+    }
+    .route {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    font-weight: 600;
+    color: #121212;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    margin-bottom:15px;
+    }
+    .route p span:first-child {
+    font-size: 40px;
+    font-weight: 700;
+    font-family: GothamPro-bold, arial, sans-serif;
+    color: rgba(50,86,164,1);
+    }
+    .route svg {
+    height: 40px;
+    -webkit-transform: rotateY(180deg);
+    transform: rotateY(180deg);
+    width: 40px;
+    min-width: 40px;
+    fill: #1b3b7f;
+    }
+    .route p {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    margin-bottom: 0;
+    }
+    .route p span:last-child {
+    font-size: 16px;
+    font-weight: 700;
+    width: 125px;
+    text-align: center;
+    }
+    .time {
+    margin: 20px 0 20px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    border-top: 1px dashed #cdcdcd;
+    padding: 25px 0;
+    border-bottom: 1px dashed #cdcdcd;
+    }
+    .time p {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    }
+    .time p span:last-child {
+    font-size: 22px;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: #121212;
+    }
+    .flight p span:last-child {
+    font-size: 22px;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: #121212;
+    }
+    .flight {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    -webkit-box-pack: space-evenly;
+    -ms-flex-pack: space-evenly;
+    justify-content: space-evenly;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    }
+    .flight p {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    width: 50%;
+    margin: 20px 0 0;
+    }
+    .flight p:nth-child(even) {
+    text-align: right;
+    }
+    .flight p:nth-child(odd) {
+    text-align: left;
+    }
+    .flight p:first-child, .flight p:nth-child(2) {
+    margin-top: 0;
+    }
+    .flight p span:first-child {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #777676;
+    }
+    .time p span:first-child {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #777676;
+    }
+    .title {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    padding: 12px 15px;
+    border-radius: 20px 20px 0 0;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    background-color: rgba(27,59,127,1);
+    background: -webkit-gradient(linear, left top, right top, color-stop(-0.12%, rgba(27,59,127,1)), to(rgba(50,86,164,1)));
+    background: -o-linear-gradient(left, rgba(27,59,127,1) -0.12%, rgba(50,86,164,1) 100%);
+    background: linear-gradient(90deg, rgba(27,59,127,1) -0.12%, rgba(50,86,164,1) 100%);
+    }
+    .title svg {
+    height: 24px;
+    -webkit-transform: scaleX(-1);
+    -ms-transform: scaleX(-1);
+    transform: scaleX(-1);
+    width: 24px;
+    margin-left: 10px;
+    margin-right: 30px;
+    }
+    .title span {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: GothamPro-bold, arial, sans-serif;
+    color: #ffffff;
+    text-transform: uppercase;
+    }
+    .title span:only-child {
+      margin: 0 auto;
+    }
+    .ticket-bus-inner .image {
+    width: 100%;
+    border-top: 1px dashed #cdcdcd;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    position: relative;
+    }
+    .ticket-bus-inner .image:after {
+    content: "";
+    position: absolute;
+    right: -36px;
+    top: -14px;
+    background: #ffffff;
+    -webkit-box-shadow: inset 2px 2px 20px #d6d6d6;
+    box-shadow: inset 2px 2px 20px #d6d6d6;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    }
+    .ticket-bus-inner .image:before {
+    content: "";
+    position: absolute;
+    left: -36px;
+    top: -14px;
+    background: #ffffff;
+    -webkit-box-shadow: inset 2px 2px 20px #d6d6d6;
+    box-shadow: inset 2px 2px 20px #d6d6d6;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    }
+
+    .ticket-bus-inner .image img {
+    width: 100%;
+    max-width: 160px;
+    }
+    .title span.share-icon {
+    margin-left: auto;
+    }
+    .title span.share-icon svg {
+    height: 20px;
+    width: 20px;
+    fill: #121212;
+    }
+    .ticket-bus-inner .cta a {
+    padding: 16px 20px;
+    background: #1976d2;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    text-align: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 500;
+    border-radius: 3px;
+    }
+    .ticket-bus-inner .cta a .pdf-icon {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    margin-right: 10px;
+    }
+    .ticket-bus-inner .cta a .pdf-icon svg {
+    height: 20px;
+    fill: #fff;
+    }
+    .passengers {
+      padding-top: 25px;
+    }
+    .passenger {
+      margin-bottom: 20px;
+    }
+    .passenger-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: #1b3b7f;
+      text-align: center;
+    }
+    .passenger-title span {
+      font-size: 15px;
+    }
+    .passenger-name, .passenger-last-name, .passenger-date-of-birth {
+      text-align: left;
+    }
+    .passenger-name span, .passenger-last-name span, .passenger-date-of-birth span{
+      display: block;
+      padding-bottom: 5px;
+      font-size: 12px;
+    }
+    .passenger-name p, .passenger-last-name p, .passenger-date-of-birth p{
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .cta {
+      padding-top: 30px;
+    }
+    .places {
+      margin-bottom: 10px;
+    }
+    .places p {
+      margin-bottom: 6px;
+      text-align: left;
+      font-size: 11px;
+      font-family: GothamPro, tahoma, verdana, arial, sans-serif!important;
+      font-weight:400;
+    }
+    .places span {
+      font-size: 12px;
+      display:block;
+      color: #343434;
+      font-family: GothamPro, tahoma, verdana, arial, sans-serif!important;
+      font-weight:400;
+    }
+    .places .place-title {
+      font-size: 14px;
+      font-weight:500;
+      font-family: GothamPro-bold, arial, sans-serif;
+      color: rgba(50,86,164,1);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .places-additional-info {
+      margin-top: 20px;
+    }
+    .places-additional-info p {
+      color: #999;
+      font-size: 10px;
+      margin-bottom:4px;
+      font-family: GothamPro, tahoma, verdana, arial, sans-serif!important;
+      font-weight:400;
+    }
+    @media screen and (max-width: 576px) {
+      .ticket-bus-inner {
+        padding: 15px;
+      }
+      .title span, .route p span:last-child {
+        font-size: 14px;
+      }
+      .ticket-bus-inner .image:after {
+        left: -28px;
+      }
+      .ticket-bus-inner .image:before {
+        right: -28px;
+      }
+      .route p span:last-child {
+        width: 100px;
+        overflow: hidden;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+  .ticket-bus
+    .title(style="display:-webkit-box;display:-ms-flexbox;display: flex;padding: 12px 15px;border-radius: 20px 20px 0 0;-webkit-box-align: center;-ms-flex-align: center;align-items: center;justify-content: space-between;background-color: rgba(27,59,127,1);background: linear-gradient(90deg, rgba(27,59,127,1) -0.12%, rgba(50,86,164,1) 100%), rgba(27,59,127,1);")
+      span
+        = data.startDate
+      if data.endDate
+        span
+          | - 
+        span
+          = data.endDate
+    .ticket-bus-inner
+      .route
+        p
+          span 
+            = data.origin
+        svg(class="svg-icon svg-fill icon icon__plane icon__plane" version="1.1" viewBox="0 0 512 512" style="height:40px;transform: rotateY(180deg);width:40px;min-width:40px;fill:#1b3b7f;")
+          g
+            path(class="st0" d="M436.3,125H99.9c-23,0-42.6,16.6-46.5,39.2L29.2,305.7c-4.9,28.8,17.3,55.1,46.5,55.1h17.8   c0-22.2,18-40.2,40.2-40.2c22.2,0,40.2,18,40.2,40.2h164.3c0-22.2,18-40.2,40.2-40.2c22.2,0,40.2,18,40.2,40.2h17.8   c26.1,0,47.2-21.1,47.2-47.2V172.2C483.5,146.1,462.4,125,436.3,125z M380.7,178.1c0-7,5.6-12.6,12.6-12.6h29.2   c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6h-29.2c-7,0-12.6-5.7-12.6-12.6V178.1z M294.5,178.1c0-7,5.6-12.6,12.6-12.6   h29.2c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6h-29.2c-7,0-12.6-5.7-12.6-12.6V178.1z M208.4,178.1   c0-7,5.7-12.6,12.6-12.6h29.2c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6H221c-7,0-12.6-5.7-12.6-12.6V178.1z    M155.9,277.7c-2.9,17.2-19.1,29.9-38.1,29.9H75.7c-2.6,0-4.2-1.2-5.2-2.2c-0.9-1-1.9-2.7-1.5-5l24.3-129.8c0.6-3,3.4-5.2,6.6-5.2   h75.2L155.9,277.7z M435.2,301.6H208.4c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7h226.8c3.9,0,7,3.1,7,7C442.2,298.4,439,301.6,435.2,301.6   z")
+            path(class="st0" d="M133.7,334.6c-14.5,0-26.2,11.7-26.2,26.2s11.7,26.2,26.2,26.2c14.5,0,26.2-11.7,26.2-26.2   S148.1,334.6,133.7,334.6z")
+            path(class="st0" d="M378.3,334.6c-14.5,0-26.2,11.7-26.2,26.2s11.7,26.2,26.2,26.2c14.5,0,26.2-11.7,26.2-26.2   S392.8,334.6,378.3,334.6z")
+        p
+          span 
+            = data.destination
+      .places
+        .place
+          if data.endDate
+            p.place-title
+                = translations.destinationText + " - " + data.startDate
+          .place-curriculum
+            div
+              .place-station
+                p
+                  = translations.onboardingText + ": "
+                  span
+                    = data.places.from.onBoardingPlace
+              .place-station
+                p
+                  = translations.outboardingText + ": " 
+                  span 
+                    = data.places.from.outBoardingPlace
+            div
+              .place-time
+                p
+                  = translations.departureTimeText + ": " 
+                  span 
+                    = data.places.from.onBoardingTime
+              .place-time
+                p
+                  = translations.arrivalTimeText + "**: " 
+                  span 
+                    = data.places.from.outBoardingTime + "*"
+        if data.endDate
+          .place
+            p.place-title
+                = translations.returnText + " - " + data.endDate
+            .place-curriculum
+              div
+                .place-station
+                  p
+                    = translations.onboardingText + ": "
+                    span
+                      = data.places.to.onBoardingPlace
+                .place-station
+                  p
+                    = translations.outboardingText + ": "
+                    span
+                      = data.places.to.outBoardingPlace
+              div
+                .place-time
+                  p
+                    = translations.departureTimeText + ": "
+                    span
+                      = data.places.to.onBoardingTime
+                .place-time
+                  p
+                    = translations.arrivalTimeText + "**: "
+                    span
+                      = data.places.to.outBoardingTime + "*"
+        .places-additional-info
+          div
+            div
+              p(style="margin-bottom: 4px;")
+                = "* - " + translations.additionalText + "."
+            div
+              p
+                = "** - " + translations.additionalText2 + "."
+      //- .passengers
+      //-   each passenger, ind in data.passengersInfo
+      //-     if passenger[0].includes(constants.ADULT)
+      //-       .passenger
+      //-         p.passenger-title
+      //-           span
+      //-             = translations.passengerText + " - " + (ind + 1)
+      //-           = " (" + translations.adultText + ")"
+      //-         .passenger-name
+      //-           span
+      //-             = translations.nameText  + ":"
+      //-           p
+      //-             = passenger[1]["name-" + (ind + 1)]
+      //-         .passenger-last-name
+      //-           span
+      //-             = translations.lastNameText  + ":"
+      //-           p
+      //-             = passenger[1]["last-name-" + (ind + 1)]
+      //-         .passenger-date-of-birth
+      //-           span
+      //-             = translations.dateOfBirthText  + ":"
+      //-           p
+      //-             = transformTimestampToDate(passenger[1]["date-of-birth-" + (ind + 1)])
+      //-     if passenger[0].includes(constants.CHILD)
+      //-       .passenger
+      //-         p.passenger-title
+      //-           span
+      //-             = translations.passengerText + " - " + (ind + 1)
+      //-           = " (" + translations.childText + ")"
+      //-         .passenger-name
+      //-           span
+      //-             = translations.nameText  + ":"
+      //-           p
+      //-             = passenger[1]["name-" + (ind + 1)]
+      //-         .passenger-last-name
+      //-           span
+      //-             = translations.lastNameText  + ":"
+      //-           p
+      //-             = passenger[1]["last-name-" + (ind + 1)]
+      //-         .passenger-date-of-birth
+      //-           span
+      //-             = translations.dateOfBirthText  + ":"
+      //-           p
+      //-             = transformTimestampToDate(passenger[1]["date-of-birth-" + (ind + 1)])
+      .image
+        //- img(src=`${qr}` alt="QR code")
+        img(src=`${logo}` alt="Logo")
+  .cta
+    button(type="button" id="generate-ticket-pdf" class="base-button base-button--medium base-button--primary fetch-btn" style="height: 50px;margin:0 auto;")
+      svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width:20px;height: 20px;fill:#ffffff;margin-right:5px;")
+        path(d="M444.875 109.792L338.208 3.125c-2-2-4.708-3.125-7.542-3.125h-224C83.135 0 64 19.135 64 42.667v426.667C64 492.865 83.135 512 106.667 512h298.667C428.865 512 448 492.865 448 469.333v-352c0-2.833-1.125-5.541-3.125-7.541zM341.333 36.417l70.25 70.25h-48.917c-11.76 0-21.333-9.573-21.333-21.333V36.417zm85.334 432.916c0 11.76-9.573 21.333-21.333 21.333H106.667c-11.76 0-21.333-9.573-21.333-21.333V42.667c0-11.76 9.573-21.333 21.333-21.333H320v64C320 108.865 339.135 128 362.667 128h64v341.333z")
+        path(d="M310.385 313.135c-9.875-7.771-19.26-15.76-25.51-22.01-8.125-8.125-15.365-16-21.656-23.5 9.813-30.323 14.115-45.958 14.115-54.292 0-35.406-12.792-42.667-32-42.667-14.594 0-32 7.583-32 43.688 0 15.917 8.719 35.24 26 57.698-4.229 12.906-9.198 27.792-14.781 44.573-2.688 8.052-5.604 15.51-8.688 22.406a177.185 177.185 0 00-7.302 3.427c-8.479 4.24-16.531 8.052-24 11.594C150.5 370.177 128 380.844 128 401.906c0 15.292 16.615 24.76 32 24.76 19.833 0 49.781-26.49 71.656-71.115 22.708-8.958 50.938-15.594 73.219-19.75 17.854 13.729 37.573 26.865 47.125 26.865 26.448 0 32-15.292 32-28.115 0-25.219-28.813-25.219-42.667-25.219-4.302.001-15.843 1.272-30.948 3.803zM160 405.333c-6.094 0-10.219-2.875-10.667-3.427 0-7.563 22.552-18.25 44.365-28.583 1.385-.656 2.792-1.313 4.219-1.99-16.021 23.23-31.865 34-37.917 34zm74.667-190.979c0-22.354 6.938-22.354 10.667-22.354 7.542 0 10.667 0 10.667 21.333 0 4.5-3 15.75-8.49 33.313-8.376-12.896-12.844-23.948-12.844-32.292zM242.844 329a220.999 220.999 0 001.938-5.625c3.958-11.875 7.521-22.542 10.698-32.146 4.427 4.875 9.198 9.865 14.313 14.979 2 2 6.958 6.5 13.563 12.135-13.148 2.865-27.137 6.417-40.512 10.657zm119.823 5.552c0 4.792 0 6.781-9.896 6.844-2.906-.625-9.625-4.583-17.917-10.229 3.01-.333 5.229-.5 6.479-.5 15.761 0 20.23 1.541 21.334 3.885z")
+      span
+        = translations.saveAsPDFText
+      .spinner

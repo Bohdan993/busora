@@ -1,0 +1,734 @@
+-
+  const separatorIndex = translations.phoneNums.indexOf("--separator--");
+  const firstPartPhones = translations.phoneNums.slice(0, separatorIndex);
+  const secondPartPhones = translations.phoneNums.slice(separatorIndex + 1);
+
+div.ticket-bus-container
+  style.
+    img {
+      break-before: auto; /* "always," "avoid," "left," "inherit," or "right" */
+      break-after: auto; /* "always," "avoid," "left," "inherit," or "right" */
+      break-inside: avoid; /* or "auto" */
+    }
+    .ticket-bus-container {
+      font-family: GothamPro, tahoma, verdana, arial, sans-serif !important; 
+    }
+    .ticket-bus {
+      margin: auto;
+      background: #ffffff;
+      -webkit-box-sizing: border-box;
+              box-sizing: border-box;
+      width: 100%;
+      padding-top: 0;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid gray;
+      /*
+      -webkit-column-break-after: page;
+      -moz-column-break-after: page;
+      break-after: page;*/
+    }
+    .ticket-bus-inner {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      padding: 12px 20px;
+      background: #fff;
+      border-radius: 6px;
+    }
+    .route {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      font-weight: 600;
+      color: #121212;
+      -ms-flex-pack: distribute;
+          justify-content: space-around;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      margin-bottom: 6px;
+    }
+    .route p span:first-child {
+      font-size: 24px;
+      font-weight: 700;
+      color: #3256a4;
+    }
+    .route .icon-container {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      height: 40px;
+      width: 40px;
+      min-width: 40px;
+    }
+    .route svg {
+      height: 40px;
+      -webkit-transform: rotateY(180deg);
+              transform: rotateY(180deg);
+      width: 40px;
+      min-width: 40px;
+      fill: #1b3b7f;
+    }
+    .route p {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      margin-bottom: 0;
+    }
+    .route p span:last-child {
+      font-size: 14px;
+      font-weight: 700;
+      width: 125px;
+      text-align: center;
+    }
+    .time {
+      margin: 12px 0 12px;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-pack: justify;
+          -ms-flex-pack: justify;
+              justify-content: space-between;
+      border-top: 1px dashed #cdcdcd;
+      padding: 12px 0;
+      border-bottom: 1px dashed #cdcdcd;
+    }
+    .time p {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+    }
+    .time p span:last-child {
+      font-size: 16px;
+      text-transform: uppercase;
+      font-weight: 500;
+      color: #121212;
+    }
+    .flight p span:last-child {
+      font-size: 16px;
+      text-transform: uppercase;
+      font-weight: 500;
+      color: #121212;
+    }
+    .flight {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-wrap: wrap;
+          flex-wrap: wrap;
+      -webkit-box-pack: space-evenly;
+          -ms-flex-pack: space-evenly;
+              justify-content: space-evenly;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+    }
+    .flight p {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      width: 50%;
+      margin: 12px 0 0;
+    }
+    .flight p:nth-child(even) {
+      text-align: right;
+    }
+    .flight p:nth-child(odd) {
+      text-align: left;
+    }
+    .flight p:first-child,
+    .flight p:nth-child(2) {
+      margin-top: 0;
+    }
+    .flight p span:first-child {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      font-size: 11px;
+      color: #777676;
+    }
+    .time p span:first-child {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      font-size: 11px;
+      color: #777676;
+    }
+    .title {
+      gap: 10px;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      padding: 10px 12px;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+      background-color: #1b3b7f;
+    }
+    .title svg {
+      height: 24px;
+      -webkit-transform: scaleX(-1);
+          -ms-transform: scaleX(-1);
+              transform: scaleX(-1);
+      width: 24px;
+      margin-left: 8px;
+      margin-right: 24px;
+    }
+    .title span {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      font-size: 11px;
+      font-weight: 700;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+    .title span:only-child {
+      margin: 0 auto;
+    }
+    .ticket-bus-inner .image {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-pack: end;
+          -ms-flex-pack: end;
+              justify-content: flex-end;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      position: relative;
+    }
+    .ticket-bus-inner .image img,
+    .carrier img {
+      width: 100%;
+      max-width: 80px;
+      display: block;
+    }
+    .title span.share-icon {
+      margin-left: auto;
+    }
+    .title span.share-icon svg {
+      height: 20px;
+      width: 20px;
+      fill: #121212;
+    }
+    .passengers {
+      padding: 8px 0;
+      border-bottom: 1px dashed #cdcdcd;
+      border-top: 1px dashed #cdcdcd;
+    }
+    .ticket-bus p.sub-title {
+      font-weight: 500;
+      color: #1b3b7f;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .ticket-bus p.sub-title span {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1b3b7f;
+      text-align: center;
+      display: block;
+    }
+    .passenger-name span,
+    .passenger-last-name span,
+    .passenger-date-of-birth span {
+      display: block;
+      padding-bottom: 5px;
+      font-size: 9px;
+    }
+    .passenger-name p,
+    .passenger-last-name p,
+    .passenger-date-of-birth p {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .places {
+      padding-bottom: 6px;
+      /* border-bottom: 1px dashed #cdcdcd;*/
+    }
+    .places p {
+      margin-bottom: 5px;
+      text-align: left;
+      font-size: 9px;
+      font-weight: 400;
+    }
+    .places span {
+      font-size: 9px;
+      display: block;
+      color: #000000;
+      font-weight: 700;
+    }
+    .places-additional-info {
+      margin-top: 6px;
+    }
+    .places-additional-info p {
+      font-size: 8px;
+      margin-bottom: 3px;
+      font-weight: 400;
+    }
+    .place-curriculum {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-pack: justify;
+          -ms-flex-pack: justify;
+              justify-content: space-between;
+    }
+    .table {
+      width: 100%;
+      table-layout: auto;
+      /* table-layout: fixed; */
+    }
+    .table td {
+      text-align: center;
+      font-size: 9px;
+      font-weight: 700;
+    }
+    .table th {
+      font-size: 9px;
+      font-weight: 400;
+    }
+    .general-info {
+      padding: 8px 0;
+      border-bottom: 1px dashed #cdcdcd;
+    }
+    .general-info-container,
+    .ticket-info-container {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      font-size: 9px;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+    }
+    .general-info-container > div,
+    .ticket-info-container > div {
+      margin: 0 3px;
+      flex: 1;
+    }
+    .general-info-container > div:first-child,
+    .ticket-info-container > div:first-child {
+      margin-left: 0;
+    }
+    .general-info-container > div:last-child,
+    .ticket-info-container > div:last-child {
+      margin-right: 0;
+    }
+    .general-info-container > div:first-child {
+      flex-basis: 20%;
+    }
+     .general-info-container > div:last-child {
+      flex-basis: 80%;
+    }
+    .ticket-info {
+      font-size: 9px;
+      padding: 8px 0;
+      border-bottom: 1px dashed #cdcdcd;
+    }
+    .carrier-info > div,
+    .ticket-data > div {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      -webkit-box-pack: start;
+          -ms-flex-pack: start;
+              justify-content: flex-start;
+      margin-bottom: 4px;
+    }
+    .carrier-info > div span,
+    .ticket-data > div span {
+      margin-right: 5px;
+    }
+    .carrier-info > div p,
+    .ticket-data > div p {
+      font-weight: 700;
+      font-size: 10px;
+      margin: 5px 0;
+    }
+    .ticket-data > div p {
+      color: #3256a4;
+    }
+    .ticket-info > div {
+      margin-bottom: 0;
+    }
+    .general-info-contacts p {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+    }
+    .general-info-contacts p:first-child {
+      margin-right: 8px;  
+    }
+    .general-info-contacts-inner {
+      display: flex;
+      justify-content: flex-start;
+    }
+    .general-info-contacts-inner p {
+      flex: 1;
+    }
+    .general-info-contacts-inner p span {
+      display:inline-block;
+    }
+    .carrier-info-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+    }
+    .carrier-info-table > tbody > tr > td {
+      width: 50%;
+      vertical-align: top;
+      padding: 0;
+    }
+    .carrier-info-table > tbody > tr > td:first-child {
+      padding-right: 10px;
+    }
+    .carrier-info-inner-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+    }
+    .carrier-info-inner-table td {
+      font-size: 9px;
+      padding: 2px 0;
+      vertical-align: top;
+    }
+    .carrier-info-inner-table td[colspan="1"] {
+      font-weight: 400;
+      width: 25%;
+      padding-right: 5px;
+    }
+    .carrier-info-inner-table td[colspan="3"] {
+      font-weight: 700;
+      font-size: 10px;
+      width: 75%;
+      white-space: pre-line;
+    }
+    .terms-of-use {
+      /*border: 1px solid gray;
+      padding: 15px 25px;*/
+      padding-top: 8px;
+      font-size: 8px;
+    }
+  
+  .ticket-bus
+    //- .title
+    //-   span
+    //-     = data.startDate
+    //-   if data.endDate
+    //-     span
+    //-       | - 
+    //-     span
+    //-       = data.endDate
+    .ticket-bus-inner
+      .route
+        p
+          span 
+            = data.origin
+        .icon-container
+          svg(class="svg-icon svg-fill icon icon__plane icon__plane" version="1.1" viewBox="0 0 512 512" style="height:40px;transform: rotateY(180deg);width:40px;min-width:40px;fill:#1b3b7f;")
+            g
+              path(class="st0" d="M436.3,125H99.9c-23,0-42.6,16.6-46.5,39.2L29.2,305.7c-4.9,28.8,17.3,55.1,46.5,55.1h17.8   c0-22.2,18-40.2,40.2-40.2c22.2,0,40.2,18,40.2,40.2h164.3c0-22.2,18-40.2,40.2-40.2c22.2,0,40.2,18,40.2,40.2h17.8   c26.1,0,47.2-21.1,47.2-47.2V172.2C483.5,146.1,462.4,125,436.3,125z M380.7,178.1c0-7,5.6-12.6,12.6-12.6h29.2   c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6h-29.2c-7,0-12.6-5.7-12.6-12.6V178.1z M294.5,178.1c0-7,5.6-12.6,12.6-12.6   h29.2c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6h-29.2c-7,0-12.6-5.7-12.6-12.6V178.1z M208.4,178.1   c0-7,5.7-12.6,12.6-12.6h29.2c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6H221c-7,0-12.6-5.7-12.6-12.6V178.1z    M155.9,277.7c-2.9,17.2-19.1,29.9-38.1,29.9H75.7c-2.6,0-4.2-1.2-5.2-2.2c-0.9-1-1.9-2.7-1.5-5l24.3-129.8c0.6-3,3.4-5.2,6.6-5.2   h75.2L155.9,277.7z M435.2,301.6H208.4c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7h226.8c3.9,0,7,3.1,7,7C442.2,298.4,439,301.6,435.2,301.6   z")
+              path(class="st0" d="M133.7,334.6c-14.5,0-26.2,11.7-26.2,26.2s11.7,26.2,26.2,26.2c14.5,0,26.2-11.7,26.2-26.2   S148.1,334.6,133.7,334.6z")
+              path(class="st0" d="M378.3,334.6c-14.5,0-26.2,11.7-26.2,26.2s11.7,26.2,26.2,26.2c14.5,0,26.2-11.7,26.2-26.2   S392.8,334.6,378.3,334.6z")        
+        p
+          span 
+            = data.destination
+      .places
+        .place
+          if (data.endDate || data.ticket.type === translations.ticketTypes[constants.OPEN_DATE])
+            p.place-title.sub-title
+              span
+                = /*translations.destinationText + " - " +*/ data.startDate
+              span
+                = translations.routeText + " " + data.places.from.routeName
+          else
+            p.place-title.sub-title
+              span
+                = /*translations.departureText + " - " +*/ data.startDate
+              span
+                = translations.routeText + " " + data.places.from.routeName
+          .place-curriculum
+            div
+              .place-station
+                p
+                  = translations.onboardingText + ": "
+                  span
+                    = data.places.from.onBoardingPlaceUkr
+              .place-station
+                p
+                  = translations.outboardingText + ": " 
+                  span 
+                    = data.places.from.outBoardingPlaceUkr
+            div
+              .place-time
+                p
+                  = translations.departureTimeText + ": " 
+                  span 
+                    = data.places.from.onBoardingTime
+              .place-time
+                p
+                  = translations.arrivalTimeText + "**: " 
+                  span 
+                    = data.places.from.outBoardingTime + "*"
+      if data.endDate || data.ticket.type === translations.ticketTypes[constants.OPEN_DATE]
+        .route
+          p
+            span 
+              = data.destination
+          .icon-container
+          //- svg(class="svg-icon svg-fill icon icon__plane icon__plane" version="1.1" viewBox="0 0 512 512" style="height:40px;transform: rotateY(180deg);width:40px;min-width:40px;fill:#1b3b7f;")
+          //-   g
+          //-     path(class="st0" d="M436.3,125H99.9c-23,0-42.6,16.6-46.5,39.2L29.2,305.7c-4.9,28.8,17.3,55.1,46.5,55.1h17.8   c0-22.2,18-40.2,40.2-40.2c22.2,0,40.2,18,40.2,40.2h164.3c0-22.2,18-40.2,40.2-40.2c22.2,0,40.2,18,40.2,40.2h17.8   c26.1,0,47.2-21.1,47.2-47.2V172.2C483.5,146.1,462.4,125,436.3,125z M380.7,178.1c0-7,5.6-12.6,12.6-12.6h29.2   c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6h-29.2c-7,0-12.6-5.7-12.6-12.6V178.1z M294.5,178.1c0-7,5.6-12.6,12.6-12.6   h29.2c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6h-29.2c-7,0-12.6-5.7-12.6-12.6V178.1z M208.4,178.1   c0-7,5.7-12.6,12.6-12.6h29.2c7,0,12.6,5.7,12.6,12.6v62.9c0,7-5.7,12.6-12.6,12.6H221c-7,0-12.6-5.7-12.6-12.6V178.1z    M155.9,277.7c-2.9,17.2-19.1,29.9-38.1,29.9H75.7c-2.6,0-4.2-1.2-5.2-2.2c-0.9-1-1.9-2.7-1.5-5l24.3-129.8c0.6-3,3.4-5.2,6.6-5.2   h75.2L155.9,277.7z M435.2,301.6H208.4c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7h226.8c3.9,0,7,3.1,7,7C442.2,298.4,439,301.6,435.2,301.6   z")
+          //-     path(class="st0" d="M133.7,334.6c-14.5,0-26.2,11.7-26.2,26.2s11.7,26.2,26.2,26.2c14.5,0,26.2-11.7,26.2-26.2   S148.1,334.6,133.7,334.6z")
+          //-     path(class="st0" d="M378.3,334.6c-14.5,0-26.2,11.7-26.2,26.2s11.7,26.2,26.2,26.2c14.5,0,26.2-11.7,26.2-26.2   S392.8,334.6,378.3,334.6z")        
+          p
+            span 
+              = data.origin
+        .places
+          .place
+            p.place-title.sub-title
+              span
+                = /*translations.returnText + " - " + */(data.ticket.type === translations.ticketTypes[constants.OPEN_DATE] ? translations.ticketTypes[constants.OPEN_DATE] : data.endDate)
+              span
+                = translations.routeText + " " + data.places.to.routeName
+            .place-curriculum
+              div
+                .place-station
+                  p
+                    = translations.onboardingText + ": "
+                    span
+                      = data.places.to.onBoardingPlaceUkr
+                .place-station
+                  p
+                    = translations.outboardingText + ": "
+                    span
+                      = data.places.to.outBoardingPlaceUkr
+              div
+                .place-time
+                  p
+                    = translations.departureTimeText + ": "
+                    span
+                      = data.places.to.onBoardingTime
+                .place-time
+                  p
+                    = translations.arrivalTimeText + "**: "
+                    span
+                      = data.places.to.outBoardingTime + "*"
+      .places-additional-info
+        div
+          div
+            p(style="margin-bottom: 3px;")
+              = "* - " + translations.additionalText + "."
+          div
+            p
+              = "** - " + translations.additionalText2 + "."
+      .passengers
+        table.table
+          thead
+            tr
+              th(scope="col") #
+              th(scope="col") 
+                =translations.nameText
+              th(scope="col")
+                = translations.lastNameText
+              th(scope="col")
+                = translations.dateOfBirthText
+              th(scope="col" colspan="5")
+                = translations.discountText
+              th(scope="col")
+                = translations.priceText + ", " + data.currencyAbbr
+          tbody
+            each passenger, ind in data.passengersInfo
+              if passenger[0].includes(constants.ADULT)
+                tr.passenger
+                  th(scope="row")= (ind + 1)
+                  td.passenger-name
+                    = passenger[1]["name"]
+                  td.passenger-last-name
+                    = passenger[1]["last-name"]
+                  td.passenger-date-of-birth
+                    = transformTimestampToDate(passenger[1]["date-of-birth"])
+                  if data.ticket.hasDiscount
+                    td.passenger-discount(colspan="5")
+                      = translations.saleText + " - " + data.ticket.discountPercentage + "%."
+                  else
+                    td.passenger-discount(colspan="5")
+                      = (passenger[1]["discount-name"] || " - ") + (passenger[1]["card-discount"] ? "\r\n" + translations.discountCardNumberText + "- (" + passenger[1]["card-discount"] + ")." : "")
+                  td.passenger-price
+                    = passenger[1]["discount-ticket-price"]
+                //- .passenger
+                //-   .passenger-name
+                //-     span
+                //-       = translations.nameText  + ":"
+                //-     p
+                //-       = passenger[1]["name-" + (ind + 1)]
+                //-   .passenger-last-name
+                //-     span
+                //-       = translations.lastNameText  + ":"
+                //-     p
+                //-       = passenger[1]["last-name-" + (ind + 1)]
+                //-   .passenger-date-of-birth
+                //-     span
+                //-       = translations.dateOfBirthText  + ":"
+                //-     p
+                //-       = transformTimestampToDate(passenger[1]["date-of-birth-" + (ind + 1)])
+              if passenger[0].includes(constants.CHILD)
+                tr.passenger
+                  th(scope="row")= (ind + 1)
+                  td.passenger-name
+                    = passenger[1]["name"]
+                  td.passenger-last-name
+                    = passenger[1]["last-name"]
+                  td.passenger-date-of-birth
+                    = transformTimestampToDate(passenger[1]["date-of-birth"])
+                  if data.ticket.hasDiscount
+                    td.passenger-discount(colspan="5")
+                      = translations.saleText + " - " + data.ticket.discountPercentage + "%."
+                  else
+                    td.passenger-discount(colspan="5")
+                      = passenger[1]["discount-name"]
+                  td.passenger-price
+                    = passenger[1]["discount-ticket-price"]
+            tr
+              th(colspan="9" style="text-align: left; font-weight: 700;padding-top: 10px;font-size:13px;color:#3256a4;")
+                = translations.inGeneralText
+              td(style="padding-top: 8px; font-size:13px;color:#3256a4;")
+                if data.convertedPrice !== data.price && data.convertedPrice !== 0
+                  = data.price
+                  br
+                  = "(" + data.convertedPrice + " UAH)"
+                else
+                  = data.price
+      .ticket-info
+        .ticket-info-container
+          .ticket-data.ticket-info-block            
+            div
+              span
+                = translations.ticketTypeText
+              p
+                - var ticketCategory = translations.ticketCategories.full
+                - if (data.ticket.hasDiscount) {
+                -   ticketCategory = translations.ticketCategories.promotional
+                - } else {
+                -   var passengersWithDiscount = data.passengersInfo.filter(function(passenger) {
+                -     var discountName = passenger[1]["discount-name"]
+                -     return discountName && discountName.trim() !== "" && discountName.trim() !== "-"
+                -   })
+                -   var passengersWithoutDiscount = data.passengersInfo.filter(function(passenger) {
+                -     var discountName = passenger[1]["discount-name"]
+                -     return !discountName || discountName.trim() === "" || discountName.trim() === "-"
+                -   })
+                -   if (passengersWithDiscount.length > 0 && passengersWithoutDiscount.length > 0) {
+                -     ticketCategory = translations.ticketCategories.full_discount
+                -   } else if (passengersWithDiscount.length > 0) {
+                -     ticketCategory = translations.ticketCategories.discount
+                -   }
+                - }
+                = ticketCategory /*+ " (" + data.ticket.type + ")"*/
+            div
+              span
+                = translations.ticketNumberText
+              p
+                = data.ticket.ticketNumber
+            div
+              span
+                = translations.ticketSeatText
+              p
+                = translations.ticketSeatInfoText
+            div
+              span
+                = translations.dateOfBuingText
+              p
+                = transformTimestampToDate(data.ticket.createdAt)
+          .image
+            img(src=`${qr}` alt="QR code")
+      .general-info
+        .general-info-container
+          .carrier.general-info-block
+            img(src=`${logo}` alt="Logo")
+          .carrier-info.general-info-block
+            table.carrier-info-table
+              tbody
+                tr
+                  td.carrier-info-left
+                    table.carrier-info-inner-table
+                      tbody
+                        tr
+                          td(colspan="1")
+                            = translations.carrierText
+                          td(colspan="3")
+                            = translations.carrierInfoText
+                        tr
+                          td(colspan="1")
+                            = translations.edrpouText
+                          td(colspan="3")
+                            |00000000
+                        tr
+                          td(colspan="1")
+                            = translations.licenseText
+                          td(colspan="3")
+                            = translations.licenseInfoText
+                  td.carrier-info-right
+                    table.carrier-info-inner-table
+                      tbody
+                        tr
+                          td(colspan="1")
+                            = translations.legalAddressText
+                          td(colspan="3")
+                            = translations.legalAddressInfoText
+                        tr
+                          td(colspan="1")
+                            = translations.actualAddressText
+                          td(colspan="3")
+                            = translations.actualAddressInfoText
+                        tr
+                          td(colspan="1")
+                            = translations.contactsText
+                          td(colspan="3")
+                            .general-info-contacts-inner
+                              p
+                                each phone, ind in firstPartPhones
+                                  span
+                                    = phone
+                              p
+                                each phone, ind in secondPartPhones
+                                  span
+                                    = phone
+      .terms-of-use
+        |!{include(termsOfUsePath)}

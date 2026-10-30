@@ -1,0 +1,555 @@
+{
+  "info": {
+    "name": "Bus API – Frontend Routes",
+    "_postman_id": "bus-api-frontend-v1",
+    "description": "Complete collection for all public-facing (non-admin) routes.\n\n**Booking flow order:**\n1. Run **Step 1 – Search Flights** (GET /api/bus-flights) → creates the session cookie automatically.\n2. Run **Step 2 – Select Flight** (POST /api/bus-flights/select) using an `id` from the step 1 response.\n3. Run **Step 3 – Get Passengers Form** (GET /api/passengers).\n4. Run **Step 4 – Validate Passengers** (POST /api/passengers/validate).\n5. Run **Step 5 – Get Payment Widget** (POST /api/payment).\n\nPostman handles the `busreisen-sess` cookie automatically via the **Cookie Jar** once step 1 is executed.\n\n**LiqPay webhook routes** (/api/tickets, /api/payment/liqpay-callback) require a valid HMAC-SHA1 `data`+`signature` pair generated with the server's `LIQPAY_PRIVATE_KEY`. Use the pre-request script snippets in those requests as a guide.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:5000",
+      "type": "string",
+      "description": "https for local dev (NODE_ENV=development starts an HTTPS server). Use http for production."
+    },
+    { "key": "languageCode", "value": "uk_UA", "type": "string" },
+    { "key": "currencyAbbr", "value": "UAH", "type": "string" },
+    {
+      "key": "originId",
+      "value": "1",
+      "type": "string",
+      "description": "City ID of the departure city"
+    },
+    {
+      "key": "destinationId",
+      "value": "2",
+      "type": "string",
+      "description": "City ID of the arrival city"
+    },
+    {
+      "key": "startDate",
+      "value": "2026-03-20",
+      "type": "string",
+      "description": "Departure date (YYYY-MM-DD)"
+    },
+    {
+      "key": "endDate",
+      "value": "one-way",
+      "type": "string",
+      "description": "Return date (YYYY-MM-DD) or 'one-way' for one-way tickets"
+    },
+    {
+      "key": "selectedFlightId",
+      "value": "",
+      "type": "string",
+      "description": "Set this from the Step 1 response before running Step 2"
+    }
+  ],
+  "item": [
+    {
+      "name": "📦 Public (no session required)",
+      "item": [
+        {
+          "name": "GET Cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cities?languageCode={{languageCode}}&mode=json",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cities"],
+              "query": [
+                { "key": "languageCode", "value": "{{languageCode}}" },
+                {
+                  "key": "mode",
+                  "value": "json",
+                  "description": "json | html"
+                },
+                {
+                  "key": "excludedCountry",
+                  "value": "",
+                  "description": "Optional country ID to exclude",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Returns all cities grouped by country. Use `mode=json` for raw data or `mode=html` for a pre-rendered <select> dropdown HTML string."
+          }
+        },
+
+        {
+          "name": "GET Currencies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/currencies?currencyAbbr=UAH,EUR,USD",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "currencies"],
+              "query": [
+                {
+                  "key": "currencyAbbr",
+                  "value": "UAH,EUR,USD",
+                  "description": "Comma-separated list of currency abbreviations"
+                },
+                {
+                  "key": "fields",
+                  "value": "name,abbr,symbol",
+                  "description": "Comma-separated extra fields to return",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "GET Translations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/translations?languageCode={{languageCode}}&objects[]=passengers-form&objects[]=ticket-list&objects[]=payment-widget",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translations"],
+              "query": [
+                { "key": "languageCode", "value": "{{languageCode}}" },
+                { "key": "objects[]", "value": "passengers-form" },
+                { "key": "objects[]", "value": "ticket-list" },
+                { "key": "objects[]", "value": "payment-widget" }
+              ]
+            },
+            "description": "Loads one or more i18n translation objects from the languages/<languageCode>/ folder. Object name matches the file prefix (e.g. `passengers-form` → `passengers-form-*.js`)."
+          }
+        },
+
+        {
+          "name": "GET Available Departure Dates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bus-flights/available-dates?originId={{originId}}&destinationId={{destinationId}}&startDate={{startDate}}&direction=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bus-flights", "available-dates"],
+              "query": [
+                { "key": "originId", "value": "{{originId}}" },
+                { "key": "destinationId", "value": "{{destinationId}}" },
+                {
+                  "key": "startDate",
+                  "value": "{{startDate}}",
+                  "description": "Used as lower bound for date listing"
+                },
+                {
+                  "key": "direction",
+                  "value": "1",
+                  "description": "1 = FORWARDS, 2 = BACKWARDS"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🎫 Booking Flow (session-based, run in order)",
+      "description": "These requests MUST be executed in order (1→2→3→4→5). Each step relies on session state set by the previous one. Postman's Cookie Jar handles the `busreisen-sess` cookie automatically.",
+      "item": [
+        {
+          "name": "Step 1 – Search Flights  [STARTS SESSION]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Auto-save the first flight id for Step 2",
+                  "const json = pm.response.json();",
+                  "if (json.status === 'ok' && Array.isArray(json.data)) {",
+                  "    const firstId = json.data[0]?.id;",
+                  "    if (firstId) {",
+                  "        pm.collectionVariables.set('selectedFlightId', firstId);",
+                  "        console.log('selectedFlightId set to:', firstId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bus-flights?languageCode={{languageCode}}&mode=json&startDate={{startDate}}&endDate={{endDate}}&originId={{originId}}&destinationId={{destinationId}}&adults=1&children=0&currencyAbbr={{currencyAbbr}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bus-flights"],
+              "query": [
+                { "key": "languageCode", "value": "{{languageCode}}" },
+                {
+                  "key": "mode",
+                  "value": "json",
+                  "description": "json | html"
+                },
+                {
+                  "key": "startDate",
+                  "value": "{{startDate}}",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "endDate",
+                  "value": "{{endDate}}",
+                  "description": "YYYY-MM-DD or 'one-way'"
+                },
+                { "key": "originId", "value": "{{originId}}" },
+                { "key": "destinationId", "value": "{{destinationId}}" },
+                { "key": "adults", "value": "1" },
+                { "key": "children", "value": "0" },
+                { "key": "currencyAbbr", "value": "{{currencyAbbr}}" }
+              ]
+            },
+            "description": "Searches for available bus flights and creates/regenerates the server session. The test script automatically saves the first flight's `id` to the `selectedFlightId` collection variable."
+          }
+        },
+
+        {
+          "name": "Step 1a – Search Alternative Flights (FORWARDS)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bus-flights/alternatives?languageCode={{languageCode}}&mode=json&startDate={{startDate}}&endDate={{endDate}}&originId={{originId}}&destinationId={{destinationId}}&adults=1&children=0&direction=1&currencyAbbr={{currencyAbbr}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bus-flights", "alternatives"],
+              "query": [
+                { "key": "languageCode", "value": "{{languageCode}}" },
+                { "key": "mode", "value": "json" },
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" },
+                { "key": "originId", "value": "{{originId}}" },
+                { "key": "destinationId", "value": "{{destinationId}}" },
+                { "key": "adults", "value": "1" },
+                { "key": "children", "value": "0" },
+                {
+                  "key": "direction",
+                  "value": "1",
+                  "description": "1=FORWARDS, 2=BACKWARDS"
+                },
+                { "key": "currencyAbbr", "value": "{{currencyAbbr}}" }
+              ]
+            },
+            "description": "Called when no exact-date results are found. Sets alternativeBusFlightsFrom in the session."
+          }
+        },
+
+        {
+          "name": "Step 1b – Search Alternative Flights (BACKWARDS / return leg)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bus-flights/alternatives?languageCode={{languageCode}}&mode=json&startDate={{startDate}}&endDate={{endDate}}&originId={{destinationId}}&destinationId={{originId}}&adults=1&children=0&direction=2&currencyAbbr={{currencyAbbr}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bus-flights", "alternatives"],
+              "query": [
+                { "key": "languageCode", "value": "{{languageCode}}" },
+                { "key": "mode", "value": "json" },
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" },
+                {
+                  "key": "originId",
+                  "value": "{{destinationId}}",
+                  "description": "Swapped for return leg"
+                },
+                {
+                  "key": "destinationId",
+                  "value": "{{originId}}",
+                  "description": "Swapped for return leg"
+                },
+                { "key": "adults", "value": "1" },
+                { "key": "children", "value": "0" },
+                { "key": "direction", "value": "2" },
+                { "key": "currencyAbbr", "value": "{{currencyAbbr}}" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Step 2 – Select Flight",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{selectedFlightId}}\",\n  \"isMain\": true,\n  \"direction\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bus-flights/select?languageCode={{languageCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bus-flights", "select"],
+              "query": [{ "key": "languageCode", "value": "{{languageCode}}" }]
+            },
+            "description": "Persists the chosen flight into the session.\n\n- `id`: flight id from Step 1 response (auto-populated via test script).\n- `isMain`: `true` for flights from the main search; `false` for alternative flights.\n- `direction`: `1` = FORWARDS (departure leg), `2` = BACKWARDS (return leg).\n\n⚠️ Requires an active session (cookie from Step 1)."
+          }
+        },
+
+        {
+          "name": "Step 3 – Get Passengers Form",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/passengers?languageCode={{languageCode}}&mode=json&type=standart",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "passengers"],
+              "query": [
+                { "key": "languageCode", "value": "{{languageCode}}" },
+                {
+                  "key": "mode",
+                  "value": "json",
+                  "description": "json | html"
+                },
+                {
+                  "key": "type",
+                  "value": "standart",
+                  "description": "standart | check"
+                }
+              ]
+            },
+            "description": "Returns discounts list and (in html mode) the passengers HTML form.\n\n⚠️ Requires session with `isStarted=true` AND a selected bus flight (Step 2)."
+          }
+        },
+
+        {
+          "name": "Step 4 – Validate Passengers",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passengersData\": [\n    {\n      \"name-1\": \"Іван\",\n      \"last-name-1\": \"Петренко\",\n      \"dob-1\": \"1990-05-15\",\n      \"phone-1\": \"+380991234567\",\n      \"email-1\": \"test@example.com\",\n      \"discount-1\": null\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/passengers/validate?languageCode={{languageCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "passengers", "validate"],
+              "query": [{ "key": "languageCode", "value": "{{languageCode}}" }]
+            },
+            "description": "Validates passenger data and saves it to the session. Adjust the array size to match `adults` count from Step 1.\n\n⚠️ Requires active session with a selected bus flight."
+          }
+        },
+
+        {
+          "name": "Step 5 – Get Payment Widget",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment?languageCode={{languageCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment"],
+              "query": [{ "key": "languageCode", "value": "{{languageCode}}" }]
+            },
+            "description": "Generates the LiqPay payment widget HTML. Also creates a Session snapshot in the DB for the callback.\n\nResponse contains:\n- `data.html` – LiqPay iframe HTML\n- `data.hasDiscount` – whether a discount code is applied\n\n⚠️ Requires steps 1-4 completed."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📊 Session Data",
+      "item": [
+        {
+          "name": "GET Is Session Started",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/current-data/is-started?languageCode={{languageCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "current-data", "is-started"],
+              "query": [{ "key": "languageCode", "value": "{{languageCode}}" }]
+            },
+            "description": "Returns `{ status: 'ok', active: true/false }`. Use to check if the session cookie is still valid."
+          }
+        },
+
+        {
+          "name": "GET Session Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/current-data?languageCode={{languageCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "current-data"],
+              "query": [{ "key": "languageCode", "value": "{{languageCode}}" }]
+            },
+            "description": "Returns current booking state: adults, children, total price, dates, currency symbol.\n\n⚠️ Requires active session with a selected bus flight."
+          }
+        },
+
+        {
+          "name": "POST Write to Session",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingPageParams\": \"?originId=1&destinationId=2&startDate=2026-03-20&endDate=one-way\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/current-data?languageCode={{languageCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "current-data"],
+              "query": [{ "key": "languageCode", "value": "{{languageCode}}" }]
+            },
+            "description": "Saves arbitrary key-value pairs into the current session (values are HTML-entity encoded). Used by the frontend to persist booking page params."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔔 LiqPay Webhooks (signed requests)",
+      "description": "These endpoints are called by LiqPay after a payment event. They require a `data` field (base64-encoded JSON) and an `signature` field (SHA1 of PRIVATE_KEY+data+PRIVATE_KEY).\n\nTo test locally use the pre-request script snippet provided in each request to generate a valid pair using your `LIQPAY_PRIVATE_KEY`.\n\n⚠️ Do NOT commit your private key into Postman – store it in a Postman Environment variable named `liqpayPrivateKey`.",
+      "item": [
+        {
+          "name": "POST LiqPay Payment Callback",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// ─── HOW TO GENERATE A VALID SIGNED PAIR ──────────────────────────────",
+                  "// 1. Add your private key as a Postman Environment variable: liqpayPrivateKey",
+                  "// 2. Construct the params object below (mirrors a real LiqPay callback)",
+                  "// 3. Uncomment and run once to get data+signature, then paste into the body.",
+                  "//",
+                  "// const CryptoJS = require('crypto-js');   // available in Postman sandbox",
+                  "// const privateKey = pm.environment.get('liqpayPrivateKey');",
+                  "// const params = {",
+                  "//   'public_key': 'your_public_key',",
+                  "//   'action': 'pay',",
+                  "//   'status': 'success',",
+                  "//   'amount': '150',",
+                  "//   'currency': 'UAH',",
+                  "//   'transaction_id': 12345678,",
+                  "//   'order_id': '<order_id_from_payment_response>',",
+                  "//   'version': '3',",
+                  "//   'info': pm.collectionVariables.get('paymentInfoRaw') || '{}'",
+                  "// };",
+                  "// const data = btoa(JSON.stringify(params));",
+                  "// const signature = CryptoJS.SHA1(privateKey + data + privateKey).toString(CryptoJS.enc.Base64);",
+                  "// pm.collectionVariables.set('webhookData', data);",
+                  "// pm.collectionVariables.set('webhookSignature', signature);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": \"{{webhookData}}\",\n  \"signature\": \"{{webhookSignature}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/liqpay-callback",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "liqpay-callback"]
+            },
+            "description": "Triggered by LiqPay after a successful payment. Internally waits 30 s before processing (sleep). Creates/updates a Ticket record and sends the PDF by email."
+          }
+        },
+
+        {
+          "name": "POST Create Ticket",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": \"{{webhookData}}\",\n  \"signature\": \"{{webhookSignature}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets"]
+            },
+            "description": "Creates a Ticket in the database from a signed LiqPay payload. Returns the created ticket JSON."
+          }
+        },
+
+        {
+          "name": "POST Generate HTML Ticket",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": \"{{webhookData}}\",\n  \"signature\": \"{{webhookSignature}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "generate"]
+            },
+            "description": "Generates and returns the HTML ticket using the `ticket.pug` view. Destroys the session after generation."
+          }
+        },
+
+        {
+          "name": "POST Download PDF",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": \"{{webhookData}}\",\n  \"signature\": \"{{webhookSignature}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/download-pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "download-pdf"]
+            },
+            "description": "Streams a ZIP archive containing one PDF per passenger. Adult PDFs are ordered by `PassengerTicket.id`; child PDFs follow."
+          }
+        },
+
+        {
+          "name": "POST Payment Fail",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"data\": \"{{webhookData}}\",\n    \"signature\": \"{{webhookSignature}}\"\n  },\n  \"signature\": \"{{webhookSignature}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/payment-fail",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "payment-fail"]
+            },
+            "description": "Called when a LiqPay payment is rejected/cancelled. Note: the `data` field here is an object (not base64 string) – the middleware checks `data.data` + `data.signature`."
+          }
+        }
+      ]
+    }
+  ]
+}
