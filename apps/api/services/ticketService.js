@@ -215,7 +215,7 @@ async function generateHTMLTicket({
       }),
       {
         color: {
-          dark: '#1B3B7F',
+          dark: '#005A87',
           light: '#FFFFFF'
         }
       },
@@ -226,9 +226,7 @@ async function generateHTMLTicket({
           qr: url,
           logo:
             'data:image/png;base64,' +
-            base64Encode(
-              path.resolve('assets', 'images', 'logo_benz_express.png')
-            ),
+            base64Encode(path.resolve('assets', 'images', 'logo_busora.png')),
           translations: loadLanguageFile('_ticket.js', languageCode),
           constants,
           transformTimestampToDate,

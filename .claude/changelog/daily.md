@@ -128,3 +128,35 @@
     runs in the Phase 6 E2E.
   - Tests: 77 → 88, including a parity test that every locale has the same
     files and keys as uk_UA.
+- Phase 5 (brand, demo notice, security) done:
+  - Brand:
+    - Logo `assets/images/logo_busora.png` (cropped from `brand/logo.png`,
+      512 px, 88 KB).
+    - Palette: header and QR use `#005A87` (darker brand blue, 7.47:1 on
+      white, so it scans and stays readable); accents use `#007BB7`.
+    - Names: cookie `busora-sess`, Redis prefix `busora:`, Swagger "Busora
+      API", download names `Busora_Ticket*.pdf` / `Busora_Tickets.zip`, uk
+      mail subject and signature.
+    - No `Benz|Бенс|busreisen` left in the API except the baseline
+      migration's provenance comment.
+  - Demo notice: `demoNoticeText` (uk/cs/en) is rendered as a boxed line above
+    the terms in the PDF (`full-ticket.pug`) and under the customer email body.
+  - `generate-html-ticket.js [uk_UA|cs_CZ|en_US]` previews a Kyiv ⇄ Praha
+    ticket per language; output `assets/ticket-sample-*.html` is gitignored.
+    Used it to render real PDFs in the container (app's `generatePDFTicket`,
+    container Chromium and fonts): Czech diacritics, dates, terms, logo and
+    notice all render. This closes Phase 4's open rendering check, apart from
+    the DB-driven path, which the Phase 6 E2E covers.
+  - Security:
+    - `POST /api/current-data` only accepts string `bookingPageParams`
+      (`sessionService.applyClientSessionUpdate`); any other key returns 400
+      and nothing is applied.
+    - `POST /api/payment` resolves the exchange rate fresh instead of trusting
+      `session.currencyExchangeRate`.
+  - Logs with personal data removed: session/passenger dumps in
+    `passengers.js` and `passengersMiddleware`; headers, cookies and session
+    in `sessionMiddlewares` (the session cookie is a credential); customer
+    email addresses in `mailService`. `/tickets/payment-fail` now logs only
+    order id, transaction id, status and error through
+    `logger.logPayment`.
+  - Tests: 88 → 92.

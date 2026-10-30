@@ -76,6 +76,7 @@ function createPassengerTicketLetter({
                     </head>
                     <body>
                         ${translations?.text ? translations.text(count) : ''}
+                        <p style="color: #777676; font-size: 12px;">${translations?.demoNoticeText ?? ''}</p>
                     </body>
                 </html>`;
 
@@ -161,7 +162,6 @@ async function sendFileMail({
             return rej(err);
           } else {
             console.log('Email sent: ' + info.response);
-            console.log('Send to Email: ' + emailAdresses[i]);
             return res('Success');
           }
         });

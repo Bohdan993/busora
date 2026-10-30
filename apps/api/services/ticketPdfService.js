@@ -170,8 +170,8 @@ async function ensureTicketPDFAndSendEmail({
       path: path.resolve('assets', 'tickets', name + '.pdf'),
       filename:
         pdfFileNames.length > 1
-          ? `Benz_Express_Ticket_${i + 1}.pdf`
-          : 'Benz_Express_Ticket.pdf'
+          ? `Busora_Ticket_${i + 1}.pdf`
+          : 'Busora_Ticket.pdf'
     }));
 
     await sendFileMail({

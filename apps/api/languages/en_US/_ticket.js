@@ -54,6 +54,8 @@ const translations = {
     full_discount: "Full and reduced",
   },
   saleText: "Promotional discount",
+  demoNoticeText:
+    "Educational demo: Busora is not a real carrier and this ticket is not valid for travel.",
 };
 
 module.exports = translations;

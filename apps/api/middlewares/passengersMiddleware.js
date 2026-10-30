@@ -7,17 +7,6 @@ function checkIfPassengersInfoExists(req, res, next) {
   try {
     const { languageCode = 'uk_UA', type } = req.query;
 
-    if (req.originalUrl.split('?')?.[0] === '/api/tickets') {
-      console.log('IS PASSANGERS INFO EXISTS', req.session?.passengersInfo);
-    }
-
-    if (req.originalUrl.split('?')?.[0] === '/api/tickets/send') {
-      console.log(
-        'IS PASSANGERS INFO EXISTS TICKET SEND',
-        req.session?.passengersInfo
-      );
-    }
-
     const error401Translations = loadLanguageFile('401-error.js', languageCode);
     if (req.originalUrl.split('?')?.[0] === '/api/passengers') {
       if (type === 'check') {

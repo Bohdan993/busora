@@ -44,7 +44,7 @@ const rateLimitConfig = {
  */
 function getSessionConfig(redisStore = null) {
   return {
-    name: 'busreisen-sess',
+    name: 'busora-sess',
     store: redisStore || undefined, // Use Redis if available, otherwise memory store
     secret: process.env.SESSION_SECRET,
     saveUninitialized: false,

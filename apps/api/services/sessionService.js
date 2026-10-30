@@ -4,8 +4,35 @@ const { Op } = require('sequelize');
 const APIError = require('@exeptions/api-error');
 const { session: Session } = require('@database/models/index');
 const { getPaymentProvider } = require('@services/payments');
+const { encodeHTMLEntities } = require('@helpers');
 
 const toBase64 = (str) => Buffer.from(str).toString('base64');
+
+// The only session keys a client may write: UI state it reads back later.
+// Everything else (prices, exchange rate, passengers, flights) is set by the
+// server — letting a client overwrite currencyExchangeRate let it lower the
+// amount it was charged.
+const CLIENT_WRITABLE_SESSION_KEYS = new Set(['bookingPageParams']);
+
+/**
+ * Applies a client's session update. Rejects the whole update (400) if it
+ * contains any key outside CLIENT_WRITABLE_SESSION_KEYS or a non-string value.
+ */
+function applyClientSessionUpdate(session, body = {}) {
+  const entries = Object.entries(body);
+  const invalid = entries.find(
+    ([key, value]) =>
+      !CLIENT_WRITABLE_SESSION_KEYS.has(key) || typeof value !== 'string'
+  );
+  if (invalid) {
+    throw APIError.BadRequestError(
+      `Only these string fields can be stored: ${[...CLIENT_WRITABLE_SESSION_KEYS].join(', ')}`
+    );
+  }
+  for (const [key, value] of entries) {
+    session[key] = encodeHTMLEntities(value);
+  }
+}
 
 /**
  * Derives a booking's payment keys from its `info` string (JSON with the
@@ -89,6 +116,7 @@ async function deleteExpiredSessions() {
 }
 
 module.exports = {
+  applyClientSessionUpdate,
   deriveOrderKeys,
   getSessionData,
   deleteExpiredSessions

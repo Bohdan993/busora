@@ -20,6 +20,8 @@ const {
 const { getSessionData } = require('@services/sessionService');
 const constants = require('@helpers/constants.js');
 const APIError = require('@exeptions/api-error');
+const logger = require('@services/loggerService');
+const { decodePayload } = require('@services/payments/signedPayload');
 const router = Router();
 
 /**
@@ -336,7 +338,7 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
           ? pdfFileNames[0] + '.pdf'
           : ticket?.PDFFileName + '.pdf';
       const singlePath = path.resolve('assets', 'tickets', singleName);
-      return res.download(singlePath, 'Benz_Express_Ticket.pdf', (err) => {
+      return res.download(singlePath, 'Busora_Ticket.pdf', (err) => {
         if (err) return next(err);
       });
     }
@@ -345,7 +347,7 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename="Benz_Express_Tickets.zip"'
+      'attachment; filename="Busora_Tickets.zip"'
     );
 
     const archive = archiver('zip', { zlib: { level: 6 } });
@@ -355,7 +357,7 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
 
     pdfFileNames.forEach((name, i) => {
       const filePath = path.resolve('assets', 'tickets', name + '.pdf');
-      archive.file(filePath, { name: `Benz_Express_Ticket_${i + 1}.pdf` });
+      archive.file(filePath, { name: `Busora_Ticket_${i + 1}.pdf` });
     });
 
     await archive.finalize();
@@ -401,15 +403,16 @@ router.post(
   [checkCallbackSignature],
   async (req, res, next) => {
     try {
-      const { data, errMsg, error } = req?.body ?? {};
+      const { data, errMsg } = req?.body ?? {};
 
-      const decodedData = Buffer.from(data?.data, 'base64').toString('utf-8');
-
-      console.log('Fail. Passangers data: ', JSON.parse(decodedData));
-      console.log('Fail. Payment data: ', data);
-      console.log('Error msg:', errMsg);
-      console.log('ERROR:', error);
-      console.log('(Date: ' + new Date().toUTCString() + ')');
+      // Identifiers only: the payload also holds the payer's name and phone
+      const payment = decodePayload(data.data);
+      logger.logPayment('payment failed (reported by client)', {
+        orderId: payment?.order_id,
+        transactionId: payment?.transaction_id,
+        status: payment?.status,
+        errMsg
+      });
 
       return req.session.destroy(function (err) {
         if (err) return next(err);

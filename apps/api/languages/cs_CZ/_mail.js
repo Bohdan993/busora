@@ -17,6 +17,8 @@ const translations = {
   ordreIdText: "ID objednávky",
   openDateText: "Otevřené datum",
   paymentDescriptionText: "Platba za",
+  demoNoticeText:
+    "Vzdělávací demo projekt: Busora není skutečný dopravce a jízdenka neplatí pro cestu.",
 };
 
 module.exports = translations;

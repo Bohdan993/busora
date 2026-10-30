@@ -1,8 +1,8 @@
 /**
- * Renders full-ticket.pug with mock data (matching the sample screenshot)
- * and writes the result to assets/ticket-sample.html.
+ * Renders full-ticket.pug with mock data (a Kyiv ⇄ Praha round trip) and
+ * writes the result to assets/ticket-sample-<languageCode>.html.
  *
- * Usage: node generate-html-ticket.js
+ * Usage: node generate-html-ticket.js [uk_UA|cs_CZ|en_US]
  */
 
 'use strict';
@@ -24,15 +24,43 @@ const {
 } = require('@helpers');
 
 // ── Translations ──────────────────────────────────────────────────────────────
-const translations = loadLanguageFile('_ticket.js', 'uk_UA');
+const languageCode = process.argv[2] || 'uk_UA';
+const translations = loadLanguageFile('_ticket.js', languageCode);
 
-// ── Mock data (mirrors the screenshot) ───────────────────────────────────────
+// ── Mock data ─────────────────────────────────────────────────────────────────
+
+// Localized names, as the DB attribute tables would return them
+const MOCK_NAMES = {
+  uk_UA: {
+    origin: 'Київ',
+    destination: 'Прага',
+    routeTo: 'Київ - Прага',
+    routeBack: 'Прага - Київ',
+    kyivStop: 'АС «Видубичі» (Наддніпрянське шосе, 1)',
+    prahaStop: 'ÚAN Florenc (Křižíkova 2110/2b)'
+  },
+  cs_CZ: {
+    origin: 'Kyjev',
+    destination: 'Praha',
+    routeTo: 'Kyjev - Praha',
+    routeBack: 'Praha - Kyjev',
+    kyivStop: 'AN Vydubyči (Naddnipranska 1)',
+    prahaStop: 'ÚAN Florenc (Křižíkova 2110/2b)'
+  },
+  en_US: {
+    origin: 'Kyiv',
+    destination: 'Prague',
+    routeTo: 'Kyiv - Prague',
+    routeBack: 'Prague - Kyiv',
+    kyivStop: 'Vydubychi bus station (1 Naddnipryanske Hwy)',
+    prahaStop: 'Florenc bus station (Křižíkova 2110/2b)'
+  }
+};
+const names = MOCK_NAMES[languageCode];
 
 // Dates
-// transformDate("2026-02-24") → "24 Лют. 2026"
-// transformDate("2026-02-26") → "26 Лют. 2026"
-const startDate = transformDate('2026-02-24'); // "24 Лют. 2026"
-const endDate = transformDate('2026-02-26'); // "26 Лют. 2026"
+const startDate = transformDate('2026-12-18', languageCode);
+const endDate = transformDate('2026-12-27', languageCode);
 
 // Passengers
 // transformTimestampToDate("1966-10-10T12:00:00.000Z") → "10.10.1966"
@@ -53,10 +81,10 @@ const passengersInfo = [
 // Ticket object
 const ticket = {
   // type must equal one of translations.ticketTypes values so the category
-  // logic inside the pug template resolves to "Акційний"
-  type: translations.ticketTypes[constants.ROUND], // "В обидві сторони"
+  // logic inside the pug template resolves to the promotional category
+  type: translations.ticketTypes[constants.ROUND],
   ticketNumber: '003971',
-  createdAt: '2026-02-23T00:00:00.000Z', // .split("T")[0] → "2026-02-23"
+  createdAt: '2026-11-02T00:00:00.000Z', // .split("T")[0] → "2026-11-02"
   hasDiscount: true,
   discountPercentage: 20
 };
@@ -64,18 +92,18 @@ const ticket = {
 // Places
 const places = {
   from: {
-    routeName: 'Запоріжжя - Швайнфурт',
-    onBoardingPlaceUkr: 'а/с «Житомир» (вул. Київська, 93, 1-2 пл.)',
-    outBoardingPlaceUkr: 'Riegeplatz',
-    onBoardingTime: '08:00',
-    outBoardingTime: '04:30'
+    routeName: names.routeTo,
+    onBoardingPlaceUkr: names.kyivStop,
+    outBoardingPlaceUkr: names.prahaStop,
+    onBoardingTime: '07:00',
+    outBoardingTime: '06:30'
   },
   to: {
-    routeName: 'Швайнфурт - Запоріжжя',
-    onBoardingPlaceUkr: 'Riegeplatz',
-    outBoardingPlaceUkr: 'а/с «Житомир» (вул. Київська, 93, 1-2 пл.)',
-    onBoardingTime: '15:00',
-    outBoardingTime: '11:00'
+    routeName: names.routeBack,
+    onBoardingPlaceUkr: names.prahaStop,
+    outBoardingPlaceUkr: names.kyivStop,
+    onBoardingTime: '18:00',
+    outBoardingTime: '17:30'
   }
 };
 
@@ -83,12 +111,12 @@ const places = {
 const termsOfUsePath = path.resolve(
   'views',
   'ticket-terms-of-use',
-  'uk_UA.pug'
+  `${languageCode}.pug`
 );
 const boundInclude = includeFunc.bind(null, pug);
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
-const logoPath = path.resolve('assets', 'images', 'logo_benz_express.png');
+const logoPath = path.resolve('assets', 'images', 'logo_busora.png');
 const logoBase64 = fs.existsSync(logoPath)
   ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
   : '';
@@ -96,7 +124,7 @@ const logoBase64 = fs.existsSync(logoPath)
 // ── Generate QR then render ───────────────────────────────────────────────────
 QRCode.toDataURL(
   JSON.stringify({ signature: 'mock-signature', timestamp: ticket.createdAt }),
-  { color: { dark: '#1B3B7F', light: '#FFFFFF' } },
+  { color: { dark: '#005A87', light: '#FFFFFF' } },
   (err, qrUrl) => {
     if (err) {
       console.error('QR error:', err);
@@ -119,11 +147,11 @@ QRCode.toDataURL(
 
         passengersInfo,
 
-        startDate, // "24 Лют. 2026"
-        endDate, // "26 Лют. 2026"  – truthy → return section rendered
+        startDate,
+        endDate, // truthy → return section rendered
 
-        origin: 'Житомир',
-        destination: 'Дрезден',
+        origin: names.origin,
+        destination: names.destination,
 
         ticket,
         places
@@ -144,18 +172,21 @@ QRCode.toDataURL(
 
     // Wrap in a full HTML document so the browser renders it correctly
     const fullHtml = `<!DOCTYPE html>
-<html lang="uk">
+<html lang="${languageCode.split('_')[0]}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Квиток ${ticket.ticketNumber}</title>
+  <title>${translations.ticketNumberText} ${ticket.ticketNumber}</title>
 </head>
 <body style="margin:0;padding:16px;background:#f5f5f5;">
   ${html}
 </body>
 </html>`;
 
-    const outPath = path.resolve('assets', 'ticket-sample.html');
+    const outPath = path.resolve(
+      'assets',
+      `ticket-sample-${languageCode}.html`
+    );
     fs.writeFileSync(outPath, fullHtml, 'utf8');
     console.log('✅  HTML written to:', outPath);
   }

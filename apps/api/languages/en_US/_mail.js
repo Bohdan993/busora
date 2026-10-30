@@ -17,6 +17,8 @@ const translations = {
   ordreIdText: "Order ID",
   openDateText: "Open date",
   paymentDescriptionText: "Payment for",
+  demoNoticeText:
+    "Educational demo: Busora is not a real carrier and this ticket is not valid for travel.",
 };
 
 module.exports = translations;

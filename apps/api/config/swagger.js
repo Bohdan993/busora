@@ -6,10 +6,10 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Busreisen API',
+      title: 'Busora API',
       version: '1.0.0',
       description:
-        'Busreisen bus-ticket booking API.\n\n' +
+        'Busora bus-ticket booking API.\n\n' +
         '**Public flow:** search cities → search flights → select flight → fill passengers → pay via LiqPay → download PDF ticket.\n\n' +
         '**Admin flow:** JWT login required. Access token goes in `Authorization: Bearer <token>` header.'
     },

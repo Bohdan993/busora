@@ -106,7 +106,7 @@ if (process.env.REDIS_HOST) {
 
   redisStore = new RedisStore({
     client: redisClient,
-    prefix: 'busreisen:'
+    prefix: 'busora:'
   });
 }
 
@@ -210,7 +210,7 @@ app.use(
   '/api-docs',
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: 'Busreisen API Docs'
+    customSiteTitle: 'Busora API Docs'
   })
 );
 

@@ -1,4 +1,4 @@
-# Busreisen API — staging image.
+# Busora API image.
 #
 # Runs on ARM64 (Oracle Ampere A1). Puppeteer 10 (via html-pdf-node) has no
 # prebuilt Chromium for arm64, so we skip its download and use the distro

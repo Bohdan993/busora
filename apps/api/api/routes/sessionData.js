@@ -3,8 +3,9 @@
 const { Router } = require('express');
 const router = Router();
 const { checkIfSessionIsStarted } = require('@middlewares/sessionMiddlewares');
-const { encodeHTMLEntities, decodeHTMLEntities } = require('@helpers');
+const { decodeHTMLEntities } = require('@helpers');
 const { calculatePrice } = require('@services/paymentService');
+const { applyClientSessionUpdate } = require('@services/sessionService');
 const {
   checkIfBusFlightSelected
 } = require('@middlewares/busFlightMiddlewares');
@@ -103,11 +104,12 @@ router.get(
  * @swagger
  * /api/current-data:
  *   post:
- *     summary: Store arbitrary data in the booking session
+ *     summary: Store client UI state in the booking session
  *     description: >
- *       Writes all key-value pairs from the request body into the session
- *       (HTML-entity-encoded). Used by the frontend to persist booking page
- *       query parameters across navigation.
+ *       Stores `bookingPageParams` (HTML-entity-encoded) so the frontend can
+ *       restore booking page query parameters across navigation. Any other
+ *       key, or a non-string value, is rejected with 400 — prices, rates and
+ *       passenger data are only ever set by the server.
  *     tags: [Session]
  *     requestBody:
  *       required: true
@@ -115,8 +117,10 @@ router.get(
  *         application/json:
  *           schema:
  *             type: object
- *             additionalProperties:
- *               type: string
+ *             additionalProperties: false
+ *             properties:
+ *               bookingPageParams:
+ *                 type: string
  *             example:
  *               bookingPageParams: "origin=1&destination=3&departure=2026-06-19"
  *     responses:
@@ -136,9 +140,7 @@ router.get(
  */
 router.post('/', [checkIfSessionIsStarted], async (req, res, next) => {
   try {
-    for (const key in req?.body) {
-      req.session[key] = encodeHTMLEntities(req.body[key]);
-    }
+    applyClientSessionUpdate(req.session, req?.body);
 
     return req.session.save(function (err) {
       if (err) return next(err);

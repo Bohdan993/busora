@@ -54,6 +54,8 @@ const translations = {
     full_discount: "Plná a zlevněná",
   },
   saleText: "Akční sleva",
+  demoNoticeText:
+    "Vzdělávací demo projekt: Busora není skutečný dopravce a jízdenka neplatí pro cestu.",
 };
 
 module.exports = translations;

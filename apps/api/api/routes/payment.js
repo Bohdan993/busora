@@ -18,6 +18,7 @@ const { checkCallbackSignature } = require('@middlewares/paymentMiddlewares');
 const { getTicketSubject } = require('@services/mailService');
 const { deriveOrderKeys } = require('@services/sessionService');
 const { getPaymentProvider } = require('@services/payments');
+const { getExchangeRate } = require('@services/exchangeRates');
 const { decodePayload } = require('@services/payments/signedPayload');
 const { processPaymentCallback } = require('@services/paymentCallbackService');
 const APIError = require('@exeptions/api-error');
@@ -94,15 +95,14 @@ router.post(
     try {
       const { languageCode = 'uk_UA' } = req?.query ?? {};
 
-      const {
-        currency,
-        passengersInfo,
-        selectedBusFlight,
-        email,
-        currencyExchangeRate
-      } = req.session;
+      const { currency, passengersInfo, selectedBusFlight, email } =
+        req.session;
 
+      // The charged amount is computed here from server-set session data and a
+      // freshly resolved rate — never from a rate stored where a client could
+      // have influenced it.
       const price = calculatePrice({ data: passengersInfo });
+      const currencyExchangeRate = await getExchangeRate(currency?.abbr);
       const currDate = Date.now();
       const ticketPrice = Math.round(
         Number(price) * Number(currencyExchangeRate)

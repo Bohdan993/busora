@@ -2,7 +2,7 @@
   "info": {
     "name": "Bus API – Frontend Routes",
     "_postman_id": "bus-api-frontend-v1",
-    "description": "Complete collection for all public-facing (non-admin) routes.\n\n**Booking flow order:**\n1. Run **Step 1 – Search Flights** (GET /api/bus-flights) → creates the session cookie automatically.\n2. Run **Step 2 – Select Flight** (POST /api/bus-flights/select) using an `id` from the step 1 response.\n3. Run **Step 3 – Get Passengers Form** (GET /api/passengers).\n4. Run **Step 4 – Validate Passengers** (POST /api/passengers/validate).\n5. Run **Step 5 – Get Payment Widget** (POST /api/payment).\n\nPostman handles the `busreisen-sess` cookie automatically via the **Cookie Jar** once step 1 is executed.\n\n**LiqPay webhook routes** (/api/tickets, /api/payment/liqpay-callback) require a valid HMAC-SHA1 `data`+`signature` pair generated with the server's `LIQPAY_PRIVATE_KEY`. Use the pre-request script snippets in those requests as a guide.",
+    "description": "Complete collection for all public-facing (non-admin) routes.\n\n**Booking flow order:**\n1. Run **Step 1 – Search Flights** (GET /api/bus-flights) → creates the session cookie automatically.\n2. Run **Step 2 – Select Flight** (POST /api/bus-flights/select) using an `id` from the step 1 response.\n3. Run **Step 3 – Get Passengers Form** (GET /api/passengers).\n4. Run **Step 4 – Validate Passengers** (POST /api/passengers/validate).\n5. Run **Step 5 – Get Payment Widget** (POST /api/payment).\n\nPostman handles the `busora-sess` cookie automatically via the **Cookie Jar** once step 1 is executed.\n\n**LiqPay webhook routes** (/api/tickets, /api/payment/liqpay-callback) require a valid HMAC-SHA1 `data`+`signature` pair generated with the server's `LIQPAY_PRIVATE_KEY`. Use the pre-request script snippets in those requests as a guide.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -154,7 +154,7 @@
 
     {
       "name": "🎫 Booking Flow (session-based, run in order)",
-      "description": "These requests MUST be executed in order (1→2→3→4→5). Each step relies on session state set by the previous one. Postman's Cookie Jar handles the `busreisen-sess` cookie automatically.",
+      "description": "These requests MUST be executed in order (1→2→3→4→5). Each step relies on session state set by the previous one. Postman's Cookie Jar handles the `busora-sess` cookie automatically.",
       "item": [
         {
           "name": "Step 1 – Search Flights  [STARTS SESSION]",

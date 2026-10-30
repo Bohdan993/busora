@@ -175,8 +175,6 @@ router.get(
             showDiscounts: !selectedBusFlight.hasDiscount
           });
 
-          console.log('MY LOG PASSANGERS SESSION', req.session);
-
           return res.json({
             status: 'ok',
             data: html,
@@ -258,8 +256,6 @@ router.post(
       const { languageCode = 'uk_UA' } = req?.query ?? {};
 
       const { passengersData } = req?.body ?? {};
-
-      console.log('MY LOG PASSANGERS DATA', passengersData);
 
       const { startDate, selectedBusFlight } = req?.session ?? {};
 

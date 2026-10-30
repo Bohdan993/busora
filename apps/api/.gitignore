@@ -11,6 +11,7 @@
 # production
 /build
 /assets/tickets
+/assets/ticket-sample-*.html
 # misc
 .DS_Store
 .env

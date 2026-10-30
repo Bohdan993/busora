@@ -1,5 +1,5 @@
 const translations = {
-  subjectText: "Ваш квиток від Benz Express",
+  subjectText: "Ваш квиток від Busora",
   text: (count) => {
     return `<p>Вітаємо!</p>
             <br>
@@ -7,7 +7,7 @@ const translations = {
             <p>${count > 1 ? "Ваші квитки знаходяться у вкладених PDF-файлах" : "Ваш квиток знаходиться у вкладеному PDF-файлі"}.</p>
             <br>
             <p style="font-style: italic;">З повагою</p>
-            <p style="font-style: italic;">Бенс Експрес</p>`;
+            <p style="font-style: italic;">Busora</p>`;
   },
   ticketText: "Квиток",
   passengerPhoneText: "Телефон пасажира",
@@ -17,6 +17,8 @@ const translations = {
   ordreIdText: "ID замовлення",
   openDateText: "Відкрита дата",
   paymentDescriptionText: "Оплата за",
+  demoNoticeText:
+    "Навчальний демо-проєкт: Busora не є реальним перевізником, квиток недійсний для поїздки.",
 };
 
 module.exports = translations;
