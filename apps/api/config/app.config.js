@@ -51,9 +51,13 @@ function getSessionConfig(redisStore = null) {
     resave: false, // Don't save session if unmodified
     rolling: false, // Don't refresh expiration on every request
     cookie: {
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
-      // secure: process.env.NODE_ENV === "production", // HTTPS only in production
-      secure: true,
+      // The web app reaches the API through a same-origin proxy; "lax" also
+      // keeps the cookie on top-level redirects back from a payment page.
+      sameSite: 'lax',
+      // Secure (HTTPS-only) unless explicitly disabled for the plain-HTTP local
+      // stack — express-session never sets a secure cookie over HTTP. Behind
+      // the HTTPS proxy, "trust proxy" makes requests count as secure.
+      secure: process.env.SESSION_COOKIE_SECURE !== 'false',
       maxAge: constants.SESSION_TIME,
       httpOnly: true // Prevent XSS attacks
     }

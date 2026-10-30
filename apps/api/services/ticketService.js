@@ -425,7 +425,8 @@ async function createTicket({
     // Every PassengerTicket carries its own price so that tickets.price is the
     // sum of them. When the caller didn't supply explicit per-passenger prices
     // (e.g. the booking flow), distribute the ticket amount across those rows
-    // evenly so the invariant SUM(passenger price) === ticket.price still holds.
+    // in proportion to each passenger's discounted fare (evenly when unknown),
+    // so the invariant SUM(passenger price) === ticket.price still holds.
     const explicitSum = passengerTicketRows.reduce(
       (sum, row) => sum + (Number(row.price) || 0),
       0
@@ -442,11 +443,15 @@ async function createTicket({
       const discountPct = Number(selectedBusFlight?.discountPercentage) || 0;
       const multiplier = 1 - discountPct / 100;
       const remaining = Math.max(0, Math.round(price) - explicitSum);
-      const per = Math.floor(remaining / unpriced.length);
-      let assigned = 0;
+      // Rows are built in passengerList order
+      const shares = splitAmount(
+        remaining,
+        unpriced.map(
+          (row) => passengerList[passengerTicketRows.indexOf(row)]?.priceWeight
+        )
+      );
       unpriced.forEach((row, i) => {
-        row.price = i === unpriced.length - 1 ? remaining - assigned : per;
-        assigned += row.price;
+        row.price = shares[i];
         row.paymentAtOffice =
           multiplier > 0 ? Math.round(row.price / multiplier) : row.price;
         if (row.paymentAtOfficeUAH == null && row.paymentAtOffice != null)
@@ -517,6 +522,41 @@ async function createTicket({
 }
 
 /**
+ * Splits an integer total into integer parts proportional to `weights`, using
+ * largest-remainder rounding so the parts always sum exactly to the total.
+ * If any weight is missing or not positive, the total is split evenly.
+ */
+function splitAmount(total, weights) {
+  const hasWeights = weights.every((weight) => Number(weight) > 0);
+  const effective = weights.map((weight) => (hasWeights ? Number(weight) : 1));
+  const weightSum = effective.reduce((sum, weight) => sum + weight, 0);
+  const exact = effective.map((weight) => (total * weight) / weightSum);
+  const parts = exact.map(Math.floor);
+
+  const remainder = total - parts.reduce((sum, part) => sum + part, 0);
+  exact
+    .map((value, index) => ({ fraction: value - Math.floor(value), index }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+    .slice(0, remainder)
+    .forEach(({ index }) => {
+      parts[index] += 1;
+    });
+  return parts;
+}
+
+/**
+ * Normalizes a submitted date of birth to "YYYY-MM-DD" (passenger.dateOfBirth
+ * is DATEONLY). Accepts an ISO date string or epoch milliseconds (number or
+ * numeric string — the old frontend's format); anything else becomes null.
+ */
+function toDateOnly(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const isEpochMs = typeof raw === 'number' || /^\d+$/.test(String(raw));
+  const date = new Date(isEpochMs ? Number(raw) : raw);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
+/**
  * Converts the legacy flattened `passengersInfo` object (built by the booking
  * flow and stored in the session) into a normalized passenger array. The index
  * is read from each entry's key (e.g. "child-passenger-3" → 3), so a child's
@@ -532,13 +572,7 @@ function passengersInfoToArray(passengersInfo) {
       const type = match[1];
       const n = match[2];
 
-      const dobRaw = val[`date-of-birth-${n}`];
-      const dateOfBirth =
-        type === 'child'
-          ? dobRaw
-            ? new Date(Number(dobRaw)).toISOString().slice(0, 10)
-            : null
-          : (dobRaw ?? null);
+      const dateOfBirth = toDateOnly(val[`date-of-birth-${n}`]);
 
       return {
         type,
@@ -554,6 +588,9 @@ function passengersInfoToArray(passengersInfo) {
           val[`discount-percantage-${n}`] ??
           null,
         discountCardNumber: parseInt(val[`card-discount-${n}`]) || null,
+        // This passenger's discounted fare in the booking currency, computed
+        // at validation. Weights the split of the charged total across rows.
+        priceWeight: Number(val[`discount-ticket-price-${n}`]) || null,
         // Booking flow never collects these admin-only fields.
         agentId: null,
         paymentAtOffice: null,
@@ -1054,6 +1091,7 @@ module.exports = {
   isPFDTicketExists,
   createTicket,
   passengersInfoToArray,
+  splitAmount,
   buildPassengerTicketRows,
   transformTicket,
   updateTicketPDFFile,

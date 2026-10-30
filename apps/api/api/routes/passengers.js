@@ -214,14 +214,14 @@ router.get(
  *                 description: >
  *                   Key-value map of passenger data. Each key is a passenger block
  *                   ID (e.g. `adult-passenger-1`); the value is an object with
- *                   fields like `name-1`, `last-name-1`, `phone-1`, `date-of-birth-1`,
- *                   `email-1`, `discount-1`.
+ *                   fields like `name-1`, `last-name-1`, `phone-1`, `date-of-birth-1`
+ *                   (ISO `YYYY-MM-DD`), `email-1`, `discount-1`.
  *                 example:
  *                   adult-passenger-1:
  *                     name-1: Ivan
  *                     last-name-1: Petrenko
  *                     phone-1: "+380671234567"
- *                     date-of-birth-1: "20-03-1985"
+ *                     date-of-birth-1: "1985-03-20"
  *                     email-1: ivan@example.com
  *     responses:
  *       200:

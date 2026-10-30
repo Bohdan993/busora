@@ -144,8 +144,12 @@ async function ensureTicketPDFAndSendEmail({
     const ticketWithRelations = await loadTicketWithRelations(ticket.id);
     const results = await generatePerPassengerPDFs(ticketWithRelations);
     await persistPerPassengerPDFs(ticketWithRelations, results);
-    // results is [{ key, pdfName }, ...] — use it directly without an extra DB round-trip
-    results.forEach(({ pdfName }) => pdfFileNames.push(pdfName));
+    // results is [{ key, pdfName }, ...] — use it directly without an extra DB
+    // round-trip. pdfName carries ".pdf"; stored names (and the paths built
+    // below) don't, so strip it.
+    results.forEach(({ pdfName }) =>
+      pdfFileNames.push(path.basename(pdfName, '.pdf'))
+    );
   }
 
   // Guard: if generation produced no per-passenger PDFs AND there is no legacy
