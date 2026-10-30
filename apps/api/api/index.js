@@ -20,6 +20,7 @@ const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('../config/swagger');
 const logger = require('@services/loggerService');
+const { getPaymentProvider } = require('@services/payments');
 const {
   corsConfig,
   rateLimitConfig,
@@ -235,6 +236,10 @@ app.use(handleError);
 
 async function start() {
   try {
+    // Fail fast on missing/invalid payment config instead of on the first payment
+    const paymentProvider = getPaymentProvider();
+    logger.info(`Payment provider: ${paymentProvider.name}`);
+
     if (server) {
       server.listen(PORT, () => {
         logger.info(`🚀 Development server (HTTPS) running on port ${PORT}`);

@@ -56,3 +56,40 @@
     literal injection-safe. Phase 8: the admin UI still sends the old keys.
   - Tests: 46 → 63 (market rules, rate providers and cache, route keys, error
     mapping).
+- Phase 3 (payments) done, apart from the full-booking E2E (see the last
+  item):
+  - [INTEGRATION] `services/payments`: the provider is chosen by
+    `PAYMENT_PROVIDER` (`mock` by default, or `liqpay`). Both implement
+    `sign` / `verify` / `createCheckout`. Config is validated at startup; the
+    API refuses to boot without its keys (`MOCK_PAYMENT_SECRET` ≥ 32 chars for
+    the mock, all three `LIQPAY_*` for LiqPay).
+  - [DECISION] The shared contract is LiqPay's payload shape (`status`,
+    `transaction_id`, `amount`, `currency`, `info`, `order_id`) as base64 JSON
+    plus a signature. The mock produces the same shape, so `getSessionData`,
+    `getOrCreateTicket` and `ensureTicketPDFAndSendEmail` are unchanged. The
+    plan had a separate normalized object; it isn't needed.
+  - [DECISION] `POST /api/payment` returns JSON
+    `{provider, data, signature, amount, currency, hasDiscount}` instead of
+    pug widget HTML, and the frontend decides how to render it. The plan said
+    `checkoutUrl`; this keeps frontend URLs out of the API.
+    `views/payment-widget.pug` was deleted.
+  - New `POST /api/payment/mock/complete {data, signature, outcome}` (mock
+    only, otherwise 404). It builds a signed callback and runs the same
+    `processPaymentCallback` (extracted to `services/paymentCallbackService.js`)
+    as the LiqPay webhook. The transaction id is derived from the order, and
+    a repeat completion skips delivery, so there is no second ticket or email.
+    The plan's `/:orderId/` path segment was dropped, because the signed
+    checkout already identifies the order.
+  - The order id and saved-session key are signed by the active provider
+    (`sessionService.deriveOrderKeys`, shared by payment creation and lookup)
+    instead of with `LIQPAY_PRIVATE_KEY`. The algorithm is identical in LiqPay
+    mode. Admin ticket creation also signs through the provider.
+  - Signature checks are constant-time. A bad signature is now a 400 (it used
+    to be a plain Error, so a 500).
+  - Verified over HTTP: decline, a success that reaches the session lookup,
+    forged signatures (mock, LiqPay webhook, `/tickets/generate`), an invalid
+    outcome, and the startup failure on incomplete LiqPay config.
+  - Not yet verified: the full booking E2E (search → passengers → mock pay →
+    1 ticket, N PDFs, repeat completion is a no-op). It needs route data, so
+    it runs in Phase 6 with the real seeders.
+  - Tests: 63 → 77.

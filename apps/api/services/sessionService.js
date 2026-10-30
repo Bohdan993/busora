@@ -3,7 +3,25 @@
 const { Op } = require('sequelize');
 const APIError = require('@exeptions/api-error');
 const { session: Session } = require('@database/models/index');
-const { strToSign } = require('@services/paymentService');
+const { getPaymentProvider } = require('@services/payments');
+
+const toBase64 = (str) => Buffer.from(str).toString('base64');
+
+/**
+ * Derives a booking's payment keys from its `info` string (JSON with the
+ * booking `date`): the order id sent to the payment provider, and the
+ * signature that keys the saved booking session. Both are signed by the
+ * payment provider, so they can't be forged without its secret.
+ */
+function deriveOrderKeys(info) {
+  const { sign } = getPaymentProvider();
+  const orderId = sign(toBase64(info));
+  const { date } = JSON.parse(info);
+  const sessionSignature = sign(
+    toBase64(JSON.stringify({ order_id: orderId, date }))
+  );
+  return { orderId, sessionSignature };
+}
 
 async function getSessionData(parsedData) {
   if (
@@ -19,28 +37,8 @@ async function getSessionData(parsedData) {
     );
   }
 
-  const { info } = parsedData;
-
-  const infoData = Buffer.from(info).toString('base64');
-
-  const order_id = strToSign(
-    process.env.LIQPAY_PRIVATE_KEY + infoData + process.env.LIQPAY_PRIVATE_KEY
-  );
-
-  const { date } = JSON.parse(info);
-  const sessionSignatureObj = {
-    order_id,
-    date
-  };
-
-  const sessionSignatureData = Buffer.from(
-    JSON.stringify(sessionSignatureObj)
-  ).toString('base64');
-
-  const sessionSignature = strToSign(
-    process.env.LIQPAY_PRIVATE_KEY +
-      sessionSignatureData +
-      process.env.LIQPAY_PRIVATE_KEY
+  const { orderId: order_id, sessionSignature } = deriveOrderKeys(
+    parsedData.info
   );
   const session = await Session.findOne({
     where: {
@@ -91,6 +89,7 @@ async function deleteExpiredSessions() {
 }
 
 module.exports = {
+  deriveOrderKeys,
   getSessionData,
   deleteExpiredSessions
 };

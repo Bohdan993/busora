@@ -9,6 +9,7 @@ const assert = require('node:assert/strict');
 
 const { handleError } = require('@middlewares/errorMiddlewares');
 const ExchangeRateError = require('@exeptions/exchange-rate-error');
+const APIError = require('@exeptions/api-error');
 
 function fakeResponse() {
   const res = {
@@ -44,4 +45,13 @@ test('unknown errors still map to 500', () => {
   handleError(new Error('boom'), {}, res);
 
   assert.equal(res.statusCode, 500);
+});
+
+test('an APIError without a template is answered with JSON, not a render', () => {
+  const res = fakeResponse();
+  res.render = () => assert.fail('must not render without a template');
+  handleError(APIError.NotFoundError('ticket not found'), {}, res);
+
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.body.status, 'ticket not found');
 });

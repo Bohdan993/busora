@@ -53,7 +53,7 @@ const {
   transformTimestampToDate,
   transformDate
 } = require('@helpers');
-const { strToSign } = require('@services/paymentService');
+const { getPaymentProvider } = require('@services/payments');
 const { getExchangeRate } = require('@services/exchangeRates');
 const { sendFileMail, getTicketSubject } = require('@services/mailService');
 const {
@@ -787,12 +787,9 @@ router.post(
         languageCode: 'uk_UA',
         date: currDate
       };
+      const { sign } = getPaymentProvider();
       const infoData = Buffer.from(JSON.stringify(infoObj)).toString('base64');
-      const infoDataSignature = strToSign(
-        process.env.LIQPAY_PRIVATE_KEY +
-          infoData +
-          process.env.LIQPAY_PRIVATE_KEY
-      );
+      const infoDataSignature = sign(infoData);
 
       const signatureObj = {
         action: 'pay',
@@ -806,11 +803,7 @@ router.post(
       const signatureData = Buffer.from(JSON.stringify(signatureObj)).toString(
         'base64'
       );
-      const signature = strToSign(
-        process.env.LIQPAY_PRIVATE_KEY +
-          signatureData +
-          process.env.LIQPAY_PRIVATE_KEY
-      );
+      const signature = sign(signatureData);
 
       const ticket = await createTicket({
         transactionId: uuidv4(),
