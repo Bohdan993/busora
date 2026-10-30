@@ -12,12 +12,13 @@ const {
   prepareTicketPDFUpdate
 } = require('./ticketService');
 const {
-  buildTicketQuery,
+  loadTicketWithRelations,
   buildHTMLTicketOptions,
   generatePerPassengerPDFs,
   persistPerPassengerPDFs
 } = require('./admin/ticketPdfService');
 const { sendFileMail } = require('./mailService');
+const { getLanguageCodeById } = require('./languageService');
 
 /**
  * Retrieves an existing ticket or creates a new one
@@ -61,7 +62,8 @@ async function getOrCreateTicket({
       'createdAt',
       'updatedAt',
       'ticketNumber',
-      'transactionId'
+      'transactionId',
+      'languageId'
     ],
     where: { transactionId }
   });
@@ -92,8 +94,7 @@ async function getOrCreateTicket({
  * @returns {Promise<Object>} Object containing pdfPath and pdfName
  */
 async function generateTicketPDF(ticket, signature) {
-  const query = buildTicketQuery(ticket.id);
-  const ticketWithRelations = await Ticket.findOne(query);
+  const ticketWithRelations = await loadTicketWithRelations(ticket.id);
 
   const htmlTicketOptions = await buildHTMLTicketOptions(ticketWithRelations);
   const html = await generateHTMLTicket(htmlTicketOptions);
@@ -140,8 +141,7 @@ async function ensureTicketPDFAndSendEmail({
 
   // If no per-passenger PDFs and no legacy combined PDF exist, generate them now.
   if (pdfFileNames.length === 0 && !ticket.PDFFileName) {
-    const query = buildTicketQuery(ticket.id);
-    const ticketWithRelations = await Ticket.findOne(query);
+    const ticketWithRelations = await loadTicketWithRelations(ticket.id);
     const results = await generatePerPassengerPDFs(ticketWithRelations);
     await persistPerPassengerPDFs(ticketWithRelations, results);
     // results is [{ key, pdfName }, ...] — use it directly without an extra DB round-trip
@@ -160,6 +160,10 @@ async function ensureTicketPDFAndSendEmail({
     );
   }
 
+  // The customer's email is in their booking language, like the PDFs
+  const languageCode = await getLanguageCodeById(ticket.languageId);
+  const subject = getTicketSubjectFn(selectedBusFlight, languageCode);
+
   if (pdfFileNames.length > 0) {
     // Send one email with every passenger's PDF as a separate attachment
     const pdfPaths = pdfFileNames.map((name, i) => ({
@@ -174,7 +178,8 @@ async function ensureTicketPDFAndSendEmail({
       email,
       passangersData,
       pdfPaths,
-      subject: getTicketSubjectFn(selectedBusFlight),
+      subject,
+      languageCode,
       transactionId,
       orderId
     });
@@ -190,7 +195,8 @@ async function ensureTicketPDFAndSendEmail({
       email,
       passangersData,
       pdfPath,
-      subject: getTicketSubjectFn(selectedBusFlight),
+      subject,
+      languageCode,
       transactionId,
       orderId
     });

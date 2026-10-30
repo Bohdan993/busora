@@ -16,6 +16,7 @@ const translations = {
   transactionIdText: "ID транзакції",
   ordreIdText: "ID замовлення",
   openDateText: "Відкрита дата",
+  paymentDescriptionText: "Оплата за",
 };
 
 module.exports = translations;

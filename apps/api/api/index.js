@@ -79,6 +79,7 @@ const sessionDataRoute = require('@api/routes/sessionData');
 // const insertDataRoute = require("@api/routes/insertDatainDB");
 const { handleError } = require('@middlewares/errorMiddlewares');
 const { preventSQLInjection } = require('@middlewares/validationMiddleware');
+const { validateLanguageCode } = require('@middlewares/languageMiddleware');
 
 const PORT = process.env.PORT || 5000;
 
@@ -192,6 +193,9 @@ app.use(compression(compressionConfig));
 
 // SQL injection prevention (before routes)
 app.use(preventSQLInjection);
+
+// Unknown ?languageCode= values never reach translation-file lookups
+app.use('/api', validateLanguageCode);
 
 // ── Swagger UI ────────────────────────────────────────────────────────────────
 // Served at /api-docs. Override CSP for this path only so swagger-ui assets load.

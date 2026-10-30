@@ -20,9 +20,11 @@ const {
   placeattributes: PlaceAttributes,
   route: Route,
   routeattributes: RouteAttributes,
+  ticket: Ticket,
   ticketmeta: TicketMeta,
   ticketmetaattributes: TicketMetaAttributes
 } = require('@database/models/index');
+const { DEFAULT_LOCALE } = require('@root/config/market');
 const { transformDate, transformTimestampToDate } = require('@helpers');
 const constants = require('@helpers/constants.js');
 
@@ -56,10 +58,12 @@ const buildTicketQuery = (ticketId, languageId = 1) => {
       'prevPDFFileName',
       'createdAt',
       'ticketNumber',
-      'updatedAt'
+      'updatedAt',
+      'languageId'
     ],
     where: { id: ticketId },
     include: [
+      { model: Language, attributes: ['id', 'code'] },
       buildCityInclude('originCity', languageId),
       buildCityInclude('destinationCity', languageId),
       buildBusFlightInclude('busFlightFrom', languageId),
@@ -73,6 +77,20 @@ const buildTicketQuery = (ticketId, languageId = 1) => {
       ['dateOfDeparture', 'ASC']
     ]
   };
+};
+
+/**
+ * Loads a ticket with every relation needed for its PDF/HTML, with city, place
+ * and route names in the ticket's own booking language.
+ * @param {number} ticketId - The ticket ID
+ * @returns {Promise<Object|null>} Ticket instance, or null if it doesn't exist
+ */
+const loadTicketWithRelations = async (ticketId) => {
+  const ticket = await Ticket.findByPk(ticketId, {
+    attributes: ['id', 'languageId']
+  });
+  if (!ticket) return null;
+  return Ticket.findOne(buildTicketQuery(ticketId, ticket.languageId));
 };
 
 /**
@@ -576,17 +594,18 @@ const buildPlacesData = async (
 };
 
 /**
- * Builds complete options object for HTML ticket generation
- * @param {Object} ticket - The ticket object
- * @param {number} languageId - The language ID for translations (default: 1 for Ukrainian)
+ * Builds complete options object for HTML ticket generation, in the ticket's
+ * booking language.
+ * @param {Object} ticket - Ticket loaded via loadTicketWithRelations
+ * @param {string} template - Pug template in views/
  * @returns {Promise<Object>} HTML ticket options
  */
-const buildHTMLTicketOptions = async (
-  ticket,
-  languageId = 1,
-  template = 'full-ticket.pug'
-) => {
+const buildHTMLTicketOptions = async (ticket, template = 'full-ticket.pug') => {
+  const languageId = ticket?.languageId ?? 1;
+  const languageCode = ticket?.language?.code ?? DEFAULT_LOCALE;
+
   return {
+    languageCode,
     cities: {
       from: {
         id: ticket?.originCity?.id,
@@ -608,16 +627,18 @@ const buildHTMLTicketOptions = async (
     currencyAbbr: 'UAH',
     passengersInfoData: await buildPassengersInfoData(ticket, languageId),
     dates: {
-      departure: transformDate(ticket?.dateOfDeparture),
-      departureUkr: transformDate(ticket?.dateOfDeparture),
+      departure: transformDate(ticket?.dateOfDeparture, languageCode),
+      departureUkr: transformDate(ticket?.dateOfDeparture, languageCode),
       departurePure: ticket?.dateOfDeparture,
-      return: ticket?.dateOfReturn ? transformDate(ticket?.dateOfReturn) : null,
+      return: ticket?.dateOfReturn
+        ? transformDate(ticket?.dateOfReturn, languageCode)
+        : null,
       returnUkr: ticket?.dateOfReturn
-        ? transformDate(ticket?.dateOfReturn)
+        ? transformDate(ticket?.dateOfReturn, languageCode)
         : null,
       returnPure: ticket?.dateOfReturn
     },
-    places: await buildPlacesData(ticket, 'uk_UA', languageId),
+    places: await buildPlacesData(ticket, languageCode, languageId),
     ticket,
     constants,
     template,
@@ -774,6 +795,7 @@ const persistPerPassengerPDFs = async (ticket, results) => {
 };
 
 module.exports = {
+  loadTicketWithRelations,
   buildTicketQuery,
   buildCityInclude,
   buildBusFlightInclude,

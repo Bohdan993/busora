@@ -3,7 +3,7 @@
 const { Router } = require('express');
 const router = Router();
 const { calculatePrice } = require('@services/paymentService');
-const { sleep } = require('@helpers');
+const { sleep, loadLanguageFile } = require('@helpers');
 const { checkIfSessionIsStarted } = require('@middlewares/sessionMiddlewares');
 const {
   checkIfBusFlightSelected
@@ -117,13 +117,14 @@ router.post(
         date: currDate
       });
       const { orderId, sessionSignature } = deriveOrderKeys(info);
+      const mailTranslations = loadLanguageFile('_mail.js', languageCode);
 
       const provider = getPaymentProvider();
       const checkout = provider.createCheckout({
         orderId,
         amount: ticketPrice,
         currency: HOME_CURRENCY,
-        description: 'Оплата за ' + getTicketSubject(selectedBusFlight),
+        description: `${mailTranslations.paymentDescriptionText} ${getTicketSubject(selectedBusFlight, languageCode)}`,
         language: getPaymentLanguage(languageCode),
         info,
         senderFirstName: `(${firstPassenger['phone-1']}) ${firstPassenger['name-1']}`,

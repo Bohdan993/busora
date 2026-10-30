@@ -25,6 +25,15 @@ const PHONE_PATTERN = new RegExp(
     .join('|')
 );
 
+// Site locales (folders in languages/, rows in the languages table).
+// uk_UA is the default and must keep languageId 1 — code falls back to it.
+const LOCALES = ['uk_UA', 'cs_CZ', 'en_US'];
+const DEFAULT_LOCALE = 'uk_UA';
+
+function isSupportedLocale(code) {
+  return LOCALES.includes(code);
+}
+
 // Payment page language per site locale (LiqPay supports uk and en).
 const PAYMENT_LANGUAGES = {
   uk_UA: 'uk',
@@ -41,5 +50,8 @@ module.exports = {
   HOME_CURRENCY,
   COUNTRIES,
   PHONE_PATTERN,
+  LOCALES,
+  DEFAULT_LOCALE,
+  isSupportedLocale,
   getPaymentLanguage
 };

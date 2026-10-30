@@ -8,8 +8,31 @@ const assert = require('node:assert/strict');
 const {
   HOME_CURRENCY,
   PHONE_PATTERN,
+  LOCALES,
+  DEFAULT_LOCALE,
+  isSupportedLocale,
   getPaymentLanguage
 } = require('./market');
+
+test('supported locales are Ukrainian, Czech and English; uk_UA is default', () => {
+  assert.deepEqual(LOCALES, ['uk_UA', 'cs_CZ', 'en_US']);
+  assert.equal(DEFAULT_LOCALE, 'uk_UA');
+});
+
+test('isSupportedLocale accepts only the configured locale codes', () => {
+  for (const code of LOCALES) assert.equal(isSupportedLocale(code), true);
+  for (const code of [
+    'ru_RU',
+    'de_DE',
+    '../uk_UA',
+    'uk_UA/../../etc',
+    '',
+    undefined,
+    ['uk_UA']
+  ]) {
+    assert.equal(isSupportedLocale(code), false, String(code));
+  }
+});
 
 test('home currency is UAH (the stored money truth)', () => {
   assert.equal(HOME_CURRENCY, 'UAH');

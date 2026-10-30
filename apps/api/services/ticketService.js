@@ -20,11 +20,16 @@ const {
 const {
   sequelize,
   busflight: BusFlight,
+  language: Language,
   passenger: Passenger,
   passengerticket: PassengerTicket,
   ticket: Ticket
 } = require('@database/models/index');
 const constants = require('@helpers/constants.js');
+const { isSupportedLocale } = require('@root/config/market');
+
+// uk_UA — see the reference-data migration
+const DEFAULT_LANGUAGE_ID = 1;
 const {
   convertEnumToMetaId,
   resolveMetaId,
@@ -264,6 +269,19 @@ async function generateHTMLTicket({
   });
 }
 
+// The booking language travels in the payment `info` JSON (languageCode).
+// Admin-created tickets carry no `info` and get the default language.
+async function resolveBookingLanguageId(info) {
+  const languageCode = info ? JSON.parse(info)?.languageCode : null;
+  if (!isSupportedLocale(languageCode)) return DEFAULT_LANGUAGE_ID;
+
+  const language = await Language.findOne({
+    attributes: ['id'],
+    where: { code: languageCode }
+  });
+  return language?.id ?? DEFAULT_LANGUAGE_ID;
+}
+
 async function createTicket({
   transactionId = null,
   signature,
@@ -281,7 +299,8 @@ async function createTicket({
   type = null,
   exchangeRate: exchangeRateOverride = null
 } = {}) {
-  const { currency: currencyAbbr, amount: price } = JSON.parse(data);
+  const { currency: currencyAbbr, amount: price, info } = JSON.parse(data);
+  const languageId = await resolveBookingLanguageId(info);
 
   // Lock the UAH exchange rate at booking time (UAH → 1, CZK → live rate). The
   // ticket is stored in its display currency; priceUAH is the canonical UAH
@@ -367,6 +386,7 @@ async function createTicket({
     currencyAbbr: currencyAbbr,
     originId: parseInt(originId),
     destinationId: parseInt(destinationId),
+    languageId,
     signature: signature,
     transactionId: transactionId,
     hasDiscount: selectedBusFlight?.hasDiscount,

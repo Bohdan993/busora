@@ -12,7 +12,7 @@ const {
 const { checkCallbackSignature } = require('@middlewares/paymentMiddlewares');
 const { generateHTMLTicket, createTicket } = require('@services/ticketService');
 const {
-  buildTicketQuery,
+  loadTicketWithRelations,
   buildHTMLTicketOptions,
   generatePerPassengerPDFs,
   persistPerPassengerPDFs
@@ -151,8 +151,7 @@ router.post('/', [checkCallbackSignature], async (req, res, next) => {
 
     if (!existingPassengerPdf && !ticket.PDFFileName) {
       // Reload with all relations needed by the PDF builder
-      const query = buildTicketQuery(ticket.id);
-      const ticketWithRelations = await Ticket.findOne(query);
+      const ticketWithRelations = await loadTicketWithRelations(ticket.id);
       const results = await generatePerPassengerPDFs(ticketWithRelations);
       await persistPerPassengerPDFs(ticketWithRelations, results);
     }
@@ -251,12 +250,10 @@ router.post('/generate', [checkCallbackSignature], async (req, res, next) => {
     }
 
     // Reload ticket with all necessary relations for HTML generation
-    const query = buildTicketQuery(ticket.id);
-    const ticketWithRelations = await Ticket.findOne(query);
+    const ticketWithRelations = await loadTicketWithRelations(ticket.id);
 
     const htmlTicketOptions = await buildHTMLTicketOptions(
       ticketWithRelations,
-      1,
       'ticket.pug'
     );
     const html = await generateHTMLTicket(htmlTicketOptions);

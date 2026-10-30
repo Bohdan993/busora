@@ -4,6 +4,7 @@
 const nodemailer = require('nodemailer');
 const { loadLanguageFile } = require('@helpers');
 const constants = require('@helpers/constants.js');
+const { DEFAULT_LOCALE } = require('@root/config/market');
 
 function createMailer() {
   const transporter = nodemailer.createTransport({
@@ -93,6 +94,9 @@ async function sendFileMail({
   sendAdminEmail = true
 }) {
   const translations = loadLanguageFile('_mail.js', languageCode);
+  // The admin team reads its copy in the default locale, whatever the
+  // customer's language
+  const adminTranslations = loadLanguageFile('_mail.js', DEFAULT_LOCALE);
   let adminText = null;
   const passengerText = createPassengerTicketLetter({
     subject,
@@ -124,7 +128,7 @@ async function sendFileMail({
       subject,
       passangersData,
       email,
-      translations,
+      translations: adminTranslations,
       transactionId,
       orderId
     });
@@ -136,7 +140,8 @@ async function sendFileMail({
       to: emailAdresses[i],
       subject:
         emailAdresses[i] === process.env.ADMIN_EMAIL
-          ? subject + ` | (${translations?.transactionIdText}:${transactionId})`
+          ? subject +
+            ` | (${adminTranslations?.transactionIdText}:${transactionId})`
           : subject,
       attachments
     };

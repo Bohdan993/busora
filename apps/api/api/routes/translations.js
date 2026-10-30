@@ -4,7 +4,10 @@ const { Router } = require('express');
 const path = require('path');
 const fs = require('fs');
 const { loadLanguageFile } = require('@helpers');
+const APIError = require('@exeptions/api-error');
 const router = Router();
+
+const OBJECT_NAME_PATTERN = /^[a-z]+$/;
 
 /**
  * @swagger
@@ -50,21 +53,28 @@ const router = Router();
  */
 router.get('/', async (req, res, next) => {
   try {
+    // languageCode is validated by validateLanguageCode before this route
     const { languageCode = 'uk_UA', objects = [] } = req?.query ?? {};
 
-    const p = path.resolve('languages', languageCode);
-    const filesNames = [];
-    const files = fs.readdirSync(p);
+    // Object names are interpolated into a RegExp below, so only plain
+    // lowercase words are accepted.
+    if (
+      !Array.isArray(objects) ||
+      !objects.every((name) => OBJECT_NAME_PATTERN.test(name))
+    ) {
+      throw APIError.BadRequestError('objects must be lowercase names');
+    }
 
-    files.forEach((file) => {
-      filesNames.push(file);
-    });
+    const filesNames = fs.readdirSync(path.resolve('languages', languageCode));
 
     const result = objects.reduce((acc, curr) => {
-      acc[curr] = loadLanguageFile(
-        filesNames.find((el) => new RegExp(`^${curr}-[a-z]+\.js`).test(el)),
-        languageCode
+      const fileName = filesNames.find((el) =>
+        new RegExp(`^${curr}-[a-z]+\\.js$`).test(el)
       );
+      if (!fileName) {
+        throw APIError.BadRequestError(`unknown translation object: ${curr}`);
+      }
+      acc[curr] = loadLanguageFile(fileName, languageCode);
       return acc;
     }, {});
 

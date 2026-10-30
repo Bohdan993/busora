@@ -93,3 +93,38 @@
     1 ticket, N PDFs, repeat completion is a no-op). It needs route data, so
     it runs in Phase 6 with the real seeders.
   - Tests: 63 → 77.
+- Phase 4 (locales uk / cs / en) done, apart from the rendered-PDF check:
+  - Added `languages/cs_CZ` and `languages/en_US` (10 files each) and
+    `views/ticket-terms-of-use/{cs_CZ,en_US}.pug`. The cs and en mail and
+    ticket texts already use the Busora brand. Deleted ru_RU and de_DE.
+  - [DECISION] 10 files per locale, not 13. `400-error.js`,
+    `payment-widget.js` and `search-widget.js` were only served to the old
+    jQuery frontend via `/api/translations`; the Next.js app will have its
+    own i18n. They were deleted for all locales.
+  - uk fixes: Russian "К поиску" → "До пошуку"; extra baggage price 2€/kg →
+    50 Kč/kg in all three terms; new `_mail.paymentDescriptionText`, so the
+    payment description is no longer hardcoded Ukrainian.
+  - Security: `loadLanguageFile` accepts only `config/market.LOCALES` and
+    bare file names, which closes the `require()` path traversal. A global
+    `validateLanguageCode` middleware returns 400 for an unsupported
+    `?languageCode=`. `/api/translations` only accepts `^[a-z]+$` object names
+    (they were interpolated into a RegExp) and returns 400 for unknown ones.
+  - [DECISION] New column `tickets.languageId` (NOT NULL DEFAULT 1, FK to
+    languages; migration `20261031000001`). `createTicket` sets it from the
+    payment `info.languageCode`. Admin-created tickets default to uk_UA.
+    Storing it on the ticket means PDFs that the admin re-generates or
+    re-sends later keep the customer's language.
+  - PDFs: `loadTicketWithRelations(id)` reads the ticket's `languageId`, then
+    loads city, place and route names in that language. `buildHTMLTicketOptions`
+    takes language, dates and terms from the ticket (signature is now
+    `(ticket, template)`). Prices stay in UAH.
+  - Emails: the customer's subject and body use the booking language; the
+    admin copy is always uk_UA (DEFAULT_LOCALE). Admin "send PDF" uses the
+    ticket's language for city names, subject and body.
+  - Note for Phase 6: the language-filtered includes in `buildTicketQuery` are
+    inner joins. Every city, place and route must have a name in all three
+    languages, or a ticket's PDF query finds nothing.
+  - Not yet verified: rendering an actual cs/en PDF (needs route data). It
+    runs in the Phase 6 E2E.
+  - Tests: 77 → 88, including a parity test that every locale has the same
+    files and keys as uk_UA.

@@ -56,6 +56,7 @@ const {
 const { getPaymentProvider } = require('@services/payments');
 const { getExchangeRate } = require('@services/exchangeRates');
 const { sendFileMail, getTicketSubject } = require('@services/mailService');
+const { getLanguageCodeById } = require('@services/languageService');
 const {
   resolveMetaId,
   getConfirmationTypes,
@@ -63,7 +64,7 @@ const {
   getTicketTypes
 } = require('@services/ticketMetaService');
 const {
-  buildTicketQuery,
+  loadTicketWithRelations,
   generatePerPassengerPDFs,
   persistPerPassengerPDFs
 } = require('@services/admin/ticketPdfService');
@@ -1159,6 +1160,16 @@ router.post(
       }
       const { id, email, passengerId } = req?.body ?? {};
 
+      // The email (subject, city names, body) is in the booking language
+      const ticketLanguage = await Ticket.findByPk(id, {
+        attributes: ['languageId']
+      });
+      if (!ticketLanguage) {
+        throw AdminAPIError.NotFoundError(`Квиток з id ${id} не знайдено`);
+      }
+      const { languageId } = ticketLanguage;
+      const languageCode = await getLanguageCodeById(languageId);
+
       const ticket = await Ticket.findOne({
         attributes: [
           'id',
@@ -1177,7 +1188,7 @@ router.post(
                 model: CityAttributes,
                 as: 'cityattrs',
                 attributes: ['name'],
-                where: { languageId: { [Op.eq]: 1 } }
+                where: { languageId: { [Op.eq]: languageId } }
               }
             ]
           },
@@ -1189,7 +1200,7 @@ router.post(
                 model: CityAttributes,
                 as: 'cityattrs',
                 attributes: ['name'],
-                where: { languageId: { [Op.eq]: 1 } }
+                where: { languageId: { [Op.eq]: languageId } }
               }
             ]
           },
@@ -1214,17 +1225,20 @@ router.post(
         throw AdminAPIError.NotFoundError(`Квиток з id ${id} не знайдено`);
       }
 
-      const subject = getTicketSubject({
-        cities: {
-          from: { name: ticket?.originCity?.cityattrs?.[0]?.name },
-          to: { name: ticket?.destinationCity?.cityattrs?.[0]?.name }
+      const subject = getTicketSubject(
+        {
+          cities: {
+            from: { name: ticket?.originCity?.cityattrs?.[0]?.name },
+            to: { name: ticket?.destinationCity?.cityattrs?.[0]?.name }
+          },
+          dates: {
+            departure: transformDate(ticket?.dateOfDeparture, languageCode),
+            return: transformDate(ticket?.dateOfReturn, languageCode)
+          },
+          type: ticket?.typeMeta?.meta_key
         },
-        dates: {
-          departure: transformDate(ticket?.dateOfDeparture),
-          return: transformDate(ticket?.dateOfReturn)
-        },
-        type: ticket?.typeMeta?.meta_key
-      });
+        languageCode
+      );
 
       let pdfPaths;
 
@@ -1296,6 +1310,7 @@ router.post(
         email,
         pdfPaths,
         subject,
+        languageCode,
         sendAdminEmail: false
       });
 
@@ -1487,8 +1502,7 @@ router.post(
       const { id, passengerId } = req?.body ?? {};
 
       // Fetch ticket with all necessary relations
-      const query = buildTicketQuery(id);
-      const ticket = await Ticket.findOne(query);
+      const ticket = await loadTicketWithRelations(id);
 
       if (!ticket) {
         throw AdminAPIError.NotFoundError(`Квиток з id ${id} не знайдено`);
