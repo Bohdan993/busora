@@ -160,3 +160,68 @@
     order id, transaction id, status and error through
     `logger.logPayment`.
   - Tests: 88 → 92.
+- Phase 6 (UA ⇄ CZ seed data) done, plus the full-booking E2E deferred from
+  Phases 3 and 4:
+  - [DECISION] Network (illustrative). All names are in uk/cs/en; ids are
+    explicit.
+    - Line 1 (group 1, route keys KP/PK): Kyiv, Zhytomyr, Rivne, Lviv ⇄
+      Ostrava, Olomouc, Hradec Králové, Praha.
+    - Line 2 (group 2, TP/PT): Ternopil, Mukachevo, Uzhhorod ⇄ Brno, Praha,
+      Plzeň.
+    - The lines share only Praha, so no city pair is served twice.
+    - 13 cities, 1 stop each, 4 routes.
+    - Fares: a UA base plus a CZ surcharge in UAH, with fixed CZK list prices
+      at ÷2.08 rounded to 10; round trip = 1.8×. Kyiv–Praha is 3300 ₴ /
+      1590 Kč.
+    - The inherited 11 passenger discounts, plus a 15 % promo on line 2's
+      Wednesday departures.
+    - 2 agents.
+  - Seeders (now committed): `20261101000001-network`,
+    `20261101000002-bus-flights` (daily on every route for 90 days from the
+    seeding date; re-run it to move the schedule forward) and
+    `20261101000003-demo-users` (admin and manager from
+    `SEED_*_EMAIL/PASSWORD`, bcrypt cost 10; skipped if unset). Data lives in
+    `database/seeders/data/network.js`; the pure row builders in
+    `buildRows.js` have 9 invariant tests.
+  - Rules the data must follow (they're encoded in the tests):
+    - Fares are directional and per currency: 4 rows per city pair, or the
+      search returns no price.
+    - A route's `countryId` is the country it starts in; the return leg is
+      found by `routeGroupId` plus the other country.
+    - Every name must exist in all locales, because queries inner-join on
+      language.
+  - E2E (scratchpad script, to become a committed test in Phase 7), all
+    passed:
+    - Czech: Praha → Kyiv, CZK, 2 adults + 1 child, `+420` phones. Charged
+      9268 UAH (4452 Kč × 2.0818). 1 ticket (cs_CZ), 3 passengers, 3 PDFs,
+      a Czech email with 3 attachments. A repeat completion was a no-op.
+      The ZIP downloaded.
+    - English: Kyiv → Praha, UAH. Ticket and email in English.
+    - Declined payment: no ticket, seats unchanged.
+    - Round trips on both lines pair by group. The Wednesday promo shows
+      2700 → 2295 ₴.
+    - `POST /current-data {currencyExchangeRate}` returns 400 with a live
+      session.
+  - Bugs found by the E2E and fixed:
+    - The session cookie was hardcoded `secure: true`, so it was never set
+      over HTTP and no booking could get past search locally. It is now
+      secure unless `SESSION_COOKIE_SECURE=false` (local `.env` only;
+      `trust proxy` covers HTTPS behind Caddy). `sameSite` is now `lax`
+      (was `none` in dev and `strict` in prod; strict breaks the redirect
+      back from a payment page).
+    - Child dates of birth had to be epoch milliseconds; an ISO date passed
+      validation and then crashed ticket creation *after payment*
+      ("Invalid time value"). `toDateOnly` now accepts both formats for all
+      passengers. The Swagger example said `20-03-1985`, which the parser
+      rejects; it now says ISO.
+    - Freshly rendered PDFs were attached as `<hash>.pdf.pdf` (ENOENT). This
+      was inherited and only hit when the callback rendered the PDFs itself
+      (the old flow usually rendered them earlier via `POST /tickets`).
+    - Per-passenger prices were split **evenly**, so with mixed discounts
+      every ticket PDF printed the wrong price (child 3090 instead of 2648).
+      This was inherited. The total is now split in proportion to each
+      passenger's discounted fare (`splitAmount`, largest remainder, exact
+      sum).
+  - Noted, not changed: the app hashes passwords with bcrypt cost 5 (weak);
+    seeded users use 10.
+  - Tests: 92 → 109.
