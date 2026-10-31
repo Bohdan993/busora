@@ -620,7 +620,7 @@ const buildHTMLTicketOptions = async (ticket, template = 'full-ticket.pug') => {
     },
     signature: ticket?.signature,
     // PDF tickets ALWAYS show price in UAH (LiqPay charges UAH); the ticket's
-    // booking currency (EUR for DE-origin) is never printed. Fall back to the
+    // booking currency (CZK for CZ-origin) is never printed. Fall back to the
     // booking-currency price only for legacy rows missing priceUAH.
     price: ticket?.priceUAH ?? ticket?.price,
     convertedPrice: ticket?.priceUAH ?? ticket?.price,

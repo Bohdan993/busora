@@ -11,7 +11,7 @@ const {
 
 const { body, validationResult } = require('express-validator');
 const AdminAPIError = require('@exeptions/admin/api-error');
-const constants = require('@helpers/constants.js');
+const { refreshTokenCookieConfig } = require('@root/config/app.config');
 const router = Router();
 
 /**
@@ -169,11 +169,11 @@ router.post(
       const { email, password } = req.body;
       const deviceFingerprint = req.fingerprint?.hash;
       const userData = await login(email, password, deviceFingerprint);
-      res.cookie('refreshToken', userData?.refreshToken, {
-        maxAge: constants.REFRESH_TOKEN_TIME,
-        httpOnly: true,
-        secure: true
-      });
+      res.cookie(
+        'refreshToken',
+        userData?.refreshToken,
+        refreshTokenCookieConfig
+      );
       return res.json({
         status: 'ok',
         data: userData
@@ -277,11 +277,11 @@ router.get('/refresh', async (req, res, next) => {
     const { refreshToken } = req.cookies || {};
     const deviceFingerprint = req.fingerprint?.hash;
     const userData = await refresh(refreshToken, deviceFingerprint);
-    res.cookie('refreshToken', userData?.refreshToken, {
-      maxAge: constants.REFRESH_TOKEN_TIME,
-      httpOnly: true,
-      secure: true
-    });
+    res.cookie(
+      'refreshToken',
+      userData?.refreshToken,
+      refreshTokenCookieConfig
+    );
     return res.json({
       status: 'ok',
       data: userData

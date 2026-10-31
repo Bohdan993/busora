@@ -37,6 +37,11 @@ const rateLimitConfig = {
   legacyHeaders: false // Disable `X-RateLimit-*` headers
 };
 
+// Cookies are HTTPS-only unless explicitly disabled for the plain-HTTP local
+// stack: browsers drop a secure cookie sent over HTTP. Behind the HTTPS proxy,
+// "trust proxy" makes requests count as secure.
+const isCookieSecure = process.env.SESSION_COOKIE_SECURE !== 'false';
+
 /**
  * Session configuration
  * @param {Object} redisStore - Optional Redis store instance
@@ -54,15 +59,23 @@ function getSessionConfig(redisStore = null) {
       // The web app reaches the API through a same-origin proxy; "lax" also
       // keeps the cookie on top-level redirects back from a payment page.
       sameSite: 'lax',
-      // Secure (HTTPS-only) unless explicitly disabled for the plain-HTTP local
-      // stack — express-session never sets a secure cookie over HTTP. Behind
-      // the HTTPS proxy, "trust proxy" makes requests count as secure.
-      secure: process.env.SESSION_COOKIE_SECURE !== 'false',
+      // express-session never sets a secure cookie over HTTP
+      secure: isCookieSecure,
       maxAge: constants.SESSION_TIME,
       httpOnly: true // Prevent XSS attacks
     }
   };
 }
+
+/**
+ * Cookie carrying the admin panel's refresh token
+ */
+const refreshTokenCookieConfig = {
+  maxAge: constants.REFRESH_TOKEN_TIME,
+  httpOnly: true,
+  secure: isCookieSecure,
+  sameSite: 'lax'
+};
 
 /**
  * Redis client configuration
@@ -149,6 +162,7 @@ module.exports = {
   corsConfig,
   rateLimitConfig,
   getSessionConfig,
+  refreshTokenCookieConfig,
   redisConfig,
   helmetConfig,
   bodyParserConfig,

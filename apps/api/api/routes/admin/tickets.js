@@ -85,7 +85,7 @@ const router = Router();
 //
 // The admin UI enters and shows every money amount in UAH, and UAH is the stored
 // truth (priceUAH / paymentAtOfficeUAH / paymentOnBusUAH). A ticket also keeps
-// its booking-currency columns (EUR for DE-origin, UAH for UA-origin) for the
+// its booking-currency columns (CZK for CZ-origin, UAH for UA-origin) for the
 // customer-facing price/PDF; those are the DERIVED side = round(UAH / rate).
 // These helpers resolve the UAH truth from the request and derive booking from it.
 

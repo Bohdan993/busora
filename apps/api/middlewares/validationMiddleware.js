@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const APIError = require('@exeptions/api-error');
 const AdminAPIError = require('@exeptions/admin/api-error');
 const logger = require('@services/loggerService');
+const { LOCALES } = require('@root/config/market');
 
 /**
  * Middleware to handle validation results from express-validator
@@ -100,7 +101,7 @@ const validators = {
   // Language code validation
   languageCode: {
     isIn: {
-      options: [['uk_UA', 'ru_RU', 'de_DE']],
+      options: [LOCALES],
       errorMessage: 'Invalid language code'
     }
   },
@@ -108,7 +109,7 @@ const validators = {
   // Currency abbreviation
   currency: {
     isIn: {
-      options: [['UAH', 'EUR', 'USD']],
+      options: [['UAH', 'CZK']],
       errorMessage: 'Invalid currency'
     }
   },
