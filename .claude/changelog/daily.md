@@ -296,3 +296,49 @@
   - Noted, not changed: the passenger form's `discount-name-N` in the session
     is always the Ukrainian name (`passengerService.js` picks `uk_UA`).
   - Tests: 109 → 114 unit tests, plus 17 integration checks.
+- Phase 8 complete (admin panel fork):
+  - Rebrand: package `busora-admin`, title "Busora Адмін Панель" (index.html,
+    manifest, home, 500 page), the Busora logo in the sidebar and on
+    login/registration (in place of the lock avatar), favicon and PWA icons
+    generated from `brand/logo.png`, theme primary `#007BB7` and success
+    `#2CA04D`, footer "Busora (навчальний демо-проєкт)", PDF downloads named
+    `Busora_Ticket_<n>.pdf`. Removed the Benz Express logo and the
+    busreisen.com.ua links. The template's MIT `LICENSE` stays. The README
+    now covers running the admin and its checks.
+  - Phones: UA (+380) / CZ (+420) replace UA/DE in both phone inputs and in
+    `validatePhone`. The rule lives in `src/helpers/phone.ts`, mirroring the
+    API's `PHONE_PATTERN`. Note that the API does not validate phones on
+    admin saves; only the booking site does.
+  - Route sort: the hardcoded ZD/DZ/ZK/KZ menus (in two columns) now render
+    from `ROUTE_SORT_OPTIONS` (KP/PK/TP/PT, the seeded `routeKey`s), and
+    `CustomOrder` is derived from it. The API side was already generic.
+  - Currencies: the admin loads them from the API, and the symbol map
+    already had CZK; EUR examples in comments became CZK.
+  - Config: `API_URL` defaults to `http://localhost:5000/api/admin`
+    (was https), and a new `apps/admin/.env.example` sets `PORT=3001` (Next
+    takes 3000) and `REACT_APP_API_URL`. `.gitignore` now lets
+    `.env.example` through.
+  - API: the admin refresh-token cookie was hardcoded `secure: true` (same
+    bug class as the Phase 6 session cookie). It now uses
+    `refreshTokenCookieConfig` in `config/app.config.js` with the same
+    `SESSION_COOKIE_SECURE` switch and `sameSite: 'lax'`. The unused
+    `validators` lists in `validationMiddleware.js` now read
+    `LOCALES` / UAH+CZK.
+  - Verified in Chromium (Playwright) against the dev stack:
+    - Login as the seeded admin. The refresh cookie is not Secure on
+      local HTTP, and a bad access token is renewed through it.
+    - Branding as described above.
+    - The tickets table lists the Phase 6/7 bookings.
+    - The route-sort menu shows the 4 directions, and choosing
+      "Прага - Київ" requests `customSorting` `PK` (200).
+    - A row's "Завантажити PDF квиток" downloads `Busora_Ticket_000101-1.pdf`
+      (valid PDF).
+    - The add-flight form created a Kyiv–Prague flight for 2027-02-15 with
+      a 20 % discount (flight 361, discount coef 0.20). It was deleted
+      afterwards through the admin API.
+    - Admin lint, format, `tsc` and the `CI=true` build pass.
+  - Expected noise: the login page's silent `GET /auth/refresh` returns 401
+    before anyone has logged in (inherited).
+  - Left for later: the login/registration pages still use a default MUI
+    theme of their own, and "demo admin login" for the public demo
+    (showing credentials or not) is a Phase 11 decision.
