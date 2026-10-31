@@ -1,0 +1,93 @@
+name: Deploy demo
+
+# After CI passes on main: build the API, web and admin images, push them to
+# GitHub's container registry, then pull them on the demo server and restart.
+# The deploy job is skipped until the server is configured (infra/DEMO.md).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  # The commit CI tested (workflow_run) or the one picked by hand
+  COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  images:
+    name: Image — ${{ matrix.app }}
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        app: [api, web, admin]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT }}
+      - name: Image name (registry paths must be lowercase)
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/busora-${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/${{ matrix.app }}
+          # Set the DEMO_PLATFORMS variable to the server's platform alone to
+          # halve the build time
+          platforms: ${{ vars.DEMO_PLATFORMS || 'linux/amd64,linux/arm64' }}
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:latest
+            ${{ steps.image.outputs.name }}:${{ env.COMMIT }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  deploy:
+    name: Deploy to the demo server
+    needs: images
+    if: vars.DEMO_HOST != ''
+    runs-on: ubuntu-24.04
+    environment: demo
+    env:
+      TARGET: ${{ vars.DEMO_USER }}@${{ vars.DEMO_HOST }}
+      DIR: ${{ vars.DEMO_DIR || '/opt/busora' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT }}
+      - name: SSH key and pinned host key
+        env:
+          SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEMO_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Copy the stack files
+        run: scp infra/docker-compose.demo.yml infra/Caddyfile.demo "$TARGET:$DIR/"
+      - name: Pull, migrate and restart
+        run: |
+          ssh "$TARGET" "set -e
+            cd '$DIR'
+            export BUSORA_IMAGE_TAG='$COMMIT'
+            dc() { docker compose --env-file demo.env -f docker-compose.demo.yml \"\$@\"; }
+            dc pull --quiet
+            dc run --rm api npm run migrate
+            dc up -d --remove-orphans
+            docker image prune -f"
