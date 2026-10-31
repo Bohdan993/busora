@@ -423,3 +423,34 @@
       diagnostic. It is harmless; the page answers 404 as intended.
     - The passenger form's discount names include percentages (seed text),
       which duplicates the percentage column on the fares page.
+- Phase 10 complete: the site wears the reference design (a style reference
+  for a white-canvas product site: Inter, pill controls, one 6% shadow).
+  - [DECISION] Busora blue `#007BB7` replaces the reference's Signal Blue as
+    the action colour, and Busora green marks positive states (done steps,
+    "office open", payment success). Decided with the owner. Text uses darker
+    shades where the brand colours fall below 4.5:1: `#00699D` for links on
+    grey, `#1D7A38` for green text.
+  - Deliberate departures from the reference are listed at the top of
+    `apps/web/src/styles/tokens.css`: a danger red for errors, milder body
+    tracking (Cyrillic and Czech diacritics), fluid display sizes.
+  - Plain CSS, no framework: tokens, global primitives in `globals.css`, CSS
+    Modules per component. New dependency: `lucide-react` (stroke icons).
+    Inter comes through `next/font` with Cyrillic and Latin Extended subsets,
+    so the build fetches it once from Google Fonts.
+  - Data layer unchanged. Markup changes: labels hold only their text (hints
+    and errors are linked by `aria-describedby`, no longer inside the label),
+    the demo banner is a labelled `<aside>`, leg titles in offer cards take
+    their heading level from where the list sits (`h2` / `h4`).
+  - New message keys in all three locales: `common.demoBadge`, `nav.book`,
+    `home.hero.badge`, `steps.completed`.
+  - Checks: axe-core (WCAG 2.1 AA + best practice) finds no violations on the
+    main pages, the search results and the passenger form with errors; focus
+    rings are visible on links, fields and the pill switch; no horizontal
+    scroll at 390 px. Lint, format, typecheck, 34 Vitest tests, build and the
+    4 Playwright tests pass.
+  - Fixed on the way: a visually hidden table header escaped the table's
+    scroll box and widened the routes page on phones (`.table-scroll` is now
+    `position: relative`).
+  - Noted for Phase 11: the API's rate limiter (100 requests per IP per
+    15 min) answers 429 without an error `code`, so the site shows "service
+    cannot be reached". Repeated screenshot and E2E runs hit it locally.
