@@ -454,3 +454,48 @@
   - Noted for Phase 11: the API's rate limiter (100 requests per IP per
     15 min) answers 429 without an error `code`, so the site shows "service
     cannot be reached". Repeated screenshot and E2E runs hit it locally.
+- Phase 11 complete (built and rehearsed locally; going live needs a server,
+  DNS and the GitHub settings listed in `infra/DEMO.md`).
+  - [DECISION] With the owner: rehearse locally first; the admin panel is
+    online but private (logins only in the server's `demo.env`); images are
+    built by GitHub Actions and pushed to GHCR.
+  - `infra/docker-compose.demo.yml` + `infra/Caddyfile.demo`: Caddy is the
+    only service with ports. The site's `/api/*` goes straight to the API (one
+    proxy hop, so `trust proxy 1` sees the visitor's IP; Caddy discards
+    client-sent X-Forwarded-For). `/api/admin/*` answers only on the admin
+    host. Mailpit sits behind Caddy basic auth. `X-Robots-Tag: noindex`
+    everywhere. `PAYMENT_PROVIDER=mock` is forced in the Compose file, and
+    each service gets only the variables it needs.
+  - Nightly reset: `apps/api/scripts/demoReset.js` (`--daily`, 03:00 Kyiv)
+    drops all tables (including SequelizeMeta/SequelizeData, because seeders
+    are tracked and would otherwise be skipped), migrates, seeds, deletes the
+    ticket PDFs, empties Mailpit and flushes Redis. It refuses to run without
+    `DEMO_RESET_ENABLED=true`, which only the `reset` service sets.
+  - Images: API Node 18 (EOL) → 22; web is the Next.js standalone server
+    (`NEXT_OUTPUT=standalone`, only in Docker); admin is the CRA build
+    served by Caddy, calling the API at the relative `/api/admin`.
+  - `.github/workflows/deploy-demo.yml`: after CI succeeds on `main`, builds
+    amd64 + arm64 images (`DEMO_PLATFORMS` narrows it), tags `latest` and the
+    commit SHA, then deploys over SSH with a pinned host key. The deploy job
+    is skipped until the `DEMO_HOST` variable exists.
+  - Fixed: the rate limiter answered 429 without an error code, so the site
+    said "service cannot be reached" and retried. It now returns
+    `TOO_MANY_REQUESTS` in the public error shape (OpenAPI and web types
+    updated, message in uk/cs/en), and the site doesn't retry it.
+  - Fixed: the demo-user seeder accepted passwords over 32 characters, which
+    the admin login form and API validation reject. It now refuses them.
+  - Rehearsal with `*.localhost` hosts, all verified:
+    - Routing: site, admin SPA, admin API 401 without a cookie, admin API 404
+      on the site host, Mailpit 401 without or with a wrong password and 200
+      with the right one, HTTP → HTTPS.
+    - Spoofed X-Forwarded-For shares the caller's rate-limit bucket; the API
+      logs the caller's IP, not Caddy's.
+    - The 4 Playwright tests pass against https://demo.localhost
+      (`E2E_BASE_URL`); bookings produce emails in Mailpit and PDFs.
+    - The private admin login works; the reset empties PDFs, the inbox and the
+      sessions; the scheduler waits until 03:00 Kyiv.
+  - Checks: API 132 unit tests and 19 integration checks; web lint, format,
+    typecheck, 34 unit tests and build.
+  - Noted: Docker Desktop restarted once during the rehearsal (two MySQL
+    stacks plus the 2 GB API image). The demo containers came back on their
+    own (`restart: unless-stopped`); the dev stack had to be started again.

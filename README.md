@@ -17,6 +17,14 @@ Republic, in both directions.
   [apps/web/README.md](apps/web/README.md).
 - `infra/`: Docker Compose setups for local development and the demo.
 
+## Public demo
+
+The demo runs the whole stack on one server behind Caddy: the site, a private
+admin panel and a password-protected Mailpit inbox. Payments are always
+simulated, emails never leave the server, and the data resets every night.
+After CI passes on `main`, GitHub Actions builds the images and deploys them.
+Setup, operations and a local rehearsal: [infra/DEMO.md](infra/DEMO.md).
+
 ## Run it locally
 
 1. `docker compose -f infra/docker-compose.dev.yml up -d --build`, then

@@ -43,7 +43,7 @@ We are building an educational bus-ticket booking project from the Busreisen / "
 ---
 
 ## Progress (2026-10-31)
-- Phases 0–10 are done. See `.claude/changelog/daily.md` for what each one changed.
+- Phases 0–11 are done (Phase 11 is rehearsed locally; going live waits for a server). See `.claude/changelog/daily.md` for what each one changed.
 - Where the work departed from the text below:
   - The mock payment endpoint is `POST /api/payment/mock/complete`.
   - Line 1 serves Ostrava – Olomouc – Hradec Králové – Praha.
@@ -51,7 +51,8 @@ We are building an educational bus-ticket booking project from the Busreisen / "
   - Generating the API types moved to Phase 9.
 - Phase 10 used a style reference (DESIGN.md/tokens) with Busora blue as the
   action colour and green for positive states; see `apps/web/src/styles/tokens.css`.
-- **Next:** Phase 11 (public demo).
+- Phase 11 runbook: `infra/DEMO.md`. The admin panel is private on the demo.
+- **Next:** Phase 12 (the `.claude` docs rewrite), or going live with the demo.
 
 ## Target layout (one monorepo, new repo)
 ```
