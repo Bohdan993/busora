@@ -68,12 +68,19 @@ jobs:
           cache-dependency-path: apps/api/package-lock.json
       - name: Generate throwaway secrets
         run: |
-          for name in SESSION_SECRET JWT_SECRET_ACCESS JWT_SECRET_REFRESH \
-            MOCK_PAYMENT_SECRET SEED_ADMIN_PASSWORD SEED_MANAGER_PASSWORD; do
-            value="$(openssl rand -hex 32)"
+          secret() {
+            value="$(openssl rand -hex "$2")"
             echo "::add-mask::$value"
-            echo "$name=$value" >> "$GITHUB_ENV"
+            echo "$1=$value" >> "$GITHUB_ENV"
+          }
+          for name in SESSION_SECRET JWT_SECRET_ACCESS JWT_SECRET_REFRESH \
+            MOCK_PAYMENT_SECRET; do
+            secret "$name" 32
           done
+          # 24 characters: the seeder refuses admin passwords over 32, the
+          # most the admin login accepts
+          secret SEED_ADMIN_PASSWORD 12
+          secret SEED_MANAGER_PASSWORD 12
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
