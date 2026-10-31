@@ -16,7 +16,8 @@ const { Op } = require('sequelize');
 
 const {
   buildFilterWhere,
-  buildSortOrder
+  buildSortOrder,
+  buildCustomSortOrder
 } = require('@services/admin/ticketListService');
 const { sequelize } = require('@database/models/index');
 const {
@@ -351,4 +352,50 @@ test('buildSortOrder: origin sorts through originCity → cityattrs', () => {
   assert.equal(clause[2].model, CityAttributes);
   assert.equal(clause[2].as, 'cityattrs');
   assert.deepEqual([clause[3], clause[4]], ['name', 'ASC']);
+});
+
+// ─── buildCustomSortOrder (route-order sorting) ─────────────────────────────
+
+// Render the ORDER terms' SQL literals so the subquery can be inspected.
+const customSortSql = (sorting) =>
+  buildCustomSortOrder(sorting).map(([literal, dir]) => [literal.val, dir]);
+
+test('buildCustomSortOrder: any well-formed route key sorts by line position', () => {
+  const terms = customSortSql([{ id: 'origin', order: 'KP' }]);
+  assert.equal(terms.length, 2);
+  assert.match(terms[0][0], /rco\.routeKey = 'KP'/);
+  assert.match(terms[0][0], /`ticket`\.`originId`/);
+  assert.match(terms[0][0], / IS NULL$/);
+  assert.deepEqual(
+    terms.map(([, dir]) => dir),
+    ['ASC', 'ASC']
+  );
+});
+
+test('buildCustomSortOrder: destination uses destinationId', () => {
+  const [[literal]] = customSortSql([{ id: 'destination', order: 'PRAHA' }]);
+  assert.match(literal, /`ticket`\.`destinationId`/);
+});
+
+test('buildCustomSortOrder: rejects malformed route keys (SQL safety)', () => {
+  for (const order of [
+    "KP' OR '1'='1",
+    'kp',
+    'K P',
+    'TOOLONGKEY',
+    '',
+    undefined,
+    42
+  ]) {
+    assert.deepEqual(
+      buildCustomSortOrder([{ id: 'origin', order }]),
+      [],
+      String(order)
+    );
+  }
+});
+
+test('buildCustomSortOrder: ignores unknown columns and non-arrays', () => {
+  assert.deepEqual(buildCustomSortOrder([{ id: 'price', order: 'KP' }]), []);
+  assert.deepEqual(buildCustomSortOrder(null), []);
 });

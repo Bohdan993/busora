@@ -1,0 +1,135 @@
+/* ---------- Amenities: icon pills, like the reference's logo cloud ---------- */
+
+.tiles {
+  display: grid;
+  gap: var(--element-gap);
+  grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  gap: var(--element-gap);
+  align-items: center;
+  padding: var(--space-12) var(--space-20) var(--space-12) var(--space-12);
+  border-radius: var(--radius-pill);
+  background: var(--color-mist);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--color-white);
+}
+
+/* ---------- Photo cards (fleet, destinations) ---------- */
+
+.mediaCard {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-8);
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--shadow-soft);
+}
+
+.media {
+  overflow: hidden;
+  aspect-ratio: 3 / 2;
+  border-radius: 22px;
+  background: var(--color-mist);
+}
+
+.media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16) var(--space-12) var(--space-12);
+}
+
+.body h3,
+.body p {
+  margin: 0;
+}
+
+.specs {
+  display: grid;
+  gap: var(--space-4) var(--space-16);
+  grid-template-columns: auto 1fr;
+  margin: 0;
+  font-size: var(--text-caption);
+}
+
+.specs dt {
+  color: var(--color-muted);
+}
+
+.specs dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.stars {
+  color: #b38f00;
+  letter-spacing: 0.1em;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-12);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: var(--space-8);
+}
+
+.price {
+  font-size: var(--text-subheading);
+  font-weight: 700;
+  letter-spacing: var(--tracking-subheading);
+}
+
+/* ---------- About ---------- */
+
+.about {
+  padding: clamp(1.5rem, 0.5rem + 4vw, 4rem);
+  border-radius: var(--radius-card);
+  background: var(--color-mist);
+}
+
+.about > p {
+  max-width: 48rem;
+}
+
+.aboutGrid {
+  display: grid;
+  gap: var(--space-28) var(--space-40);
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+}
+
+.aboutGrid ul,
+.aboutGrid ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.aboutGrid li + li {
+  margin-top: var(--space-4);
+}

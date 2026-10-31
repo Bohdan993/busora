@@ -3,9 +3,9 @@ import '@mui/lab/themeAugmentation';
 import { ukUA } from '@mui/material/locale';
 
 const themeColors = {
-  primary: '#5569ff',
+  primary: '#007BB7',
   secondary: '#6E759F',
-  success: '#57CA22',
+  success: '#2CA04D',
   warning: '#FFA319',
   error: '#FF1943',
   info: '#33C2FF',

@@ -94,9 +94,9 @@ export const normalizeTicket = (
         : raw.discount,
     // The backend derives UAH amounts and owns all currency math. The money
     // COLUMNS display the *UAH fields directly (see the Cells), and
-    // price/passengerPrice stay in UAH so a EUR row and a UAH row sort/compare
+    // price/passengerPrice stay in UAH so a CZK row and a UAH row sort/compare
     // correctly. The EDIT inputs, however, work in the ticket's own currency
-    // (Option 1): a UAH ticket is edited in UAH, a EUR ticket in EUR. So
+    // (Option 1): a UAH ticket is edited in UAH, a CZK ticket in CZK. So
     // paymentOnBus/paymentAtOffice — the accessor the edit field binds to —
     // hold the UAH value for UAH tickets and the backend-derived
     // booking-currency value otherwise. The *UAH and raw fields both stay on

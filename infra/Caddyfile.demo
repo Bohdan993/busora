@@ -1,0 +1,49 @@
+# Busora public demo. The hostnames and the Mailpit login come from demo.env
+# through docker-compose.demo.yml. Caddy gets the HTTPS certificates itself.
+{
+	email {$ACME_EMAIL}
+}
+
+(common) {
+	encode zstd gzip
+	# A fictional carrier must not turn up in search results
+	header X-Robots-Tag "noindex, nofollow"
+	header -Server
+}
+
+# The public site
+{$DEMO_SITE_HOST} {
+	import common
+	# The admin API is served on the admin host only
+	handle /api/admin/* {
+		respond 404
+	}
+	# Straight to the API (not through Next.js), so the API's rate limit sees
+	# the visitor's IP: Caddy replaces any X-Forwarded-For a client sends
+	handle /api/* {
+		reverse_proxy api:5000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# The admin panel (private: its logins live only in demo.env)
+{$DEMO_ADMIN_HOST} {
+	import common
+	handle /api/* {
+		reverse_proxy api:5000
+	}
+	handle {
+		reverse_proxy admin:80
+	}
+}
+
+# The Mailpit inbox with every demo email, for the owner only
+{$DEMO_MAIL_HOST} {
+	import common
+	basic_auth {
+		{$MAILPIT_USER} {$MAILPIT_PASSWORD_HASH}
+	}
+	reverse_proxy mailpit:8025
+}

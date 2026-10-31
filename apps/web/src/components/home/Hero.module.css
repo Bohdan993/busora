@@ -1,0 +1,76 @@
+.hero {
+  padding-top: clamp(2.5rem, 1rem + 5vw, 4.5rem);
+  text-align: center;
+}
+
+.title {
+  max-width: 58rem;
+  margin: var(--space-20) auto var(--space-20);
+  font-size: var(--text-display);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+.text {
+  max-width: 42rem;
+  margin: 0 auto;
+  color: var(--color-muted);
+}
+
+/* The blue band of the reference's hero, holding the search card */
+.band {
+  margin-top: var(--space-40);
+  padding: clamp(1.5rem, 0.5rem + 4vw, 3.5rem) var(--page-gutter);
+  background: var(--color-action);
+  scroll-margin-top: 4rem;
+}
+
+.bandInner {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+}
+
+.phones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-20);
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-28);
+  color: var(--color-white);
+}
+
+.phones h2 {
+  margin: 0;
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  letter-spacing: var(--tracking-body);
+}
+
+.phones ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-20);
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phones a {
+  display: inline-flex;
+  gap: var(--space-8);
+  align-items: center;
+  color: var(--color-white);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.phones a:hover {
+  text-decoration: underline;
+}
+
+.phones :focus-visible {
+  outline-color: var(--color-white);
+}

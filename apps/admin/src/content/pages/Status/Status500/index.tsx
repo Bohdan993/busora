@@ -112,7 +112,7 @@ function Status500() {
               <Container maxWidth="sm">
                 <Box textAlign="center">
                   <TypographyPrimary variant="h1" sx={{ my: 2 }}>
-                    Busreisen Адмін Панель
+                    Busora Адмін Панель
                   </TypographyPrimary>
                   {/* <TypographySecondary
                     variant="h4"

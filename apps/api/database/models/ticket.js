@@ -34,6 +34,8 @@ module.exports = (sequelize, DataTypes) => {
         as: 'typeMeta',
         foreignKey: 'typeId'
       });
+      // Booking language: PDFs and emails are rendered in it
+      Ticket.belongsTo(models.language, { foreignKey: 'languageId' });
       Ticket.belongsToMany(models.passenger, { through: 'passengerticket' });
       Ticket.hasMany(models.passengerticket);
     }
@@ -146,9 +148,14 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id'
         }
       },
-      children: {
-        type: DataTypes.JSON,
-        allowNull: true
+      languageId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        references: {
+          model: 'language',
+          key: 'id'
+        }
       },
       PDFFileName: {
         type: DataTypes.STRING(64),

@@ -534,17 +534,19 @@ const CUSTOM_SORT_COLUMNS = {
   origin: 'originId',
   destination: 'destinationId'
 };
-const CUSTOM_SORT_ROUTE_KEYS = new Set(['ZD', 'DZ', 'ZK', 'KZ']);
+// routecityorders.routeKey is varchar(8); keys are uppercase line codes.
+const ROUTE_KEY_PATTERN = /^[A-Z]{1,8}$/;
 
 /**
  * Builds ORDER terms that sort rows by a city's position along a bus-line
  * direction, sourced from `routecityorders` (the same data the /cities endpoint
- * returns). customSorting = [{ id: 'origin'|'destination', order: 'ZD'|'DZ'|'ZK'
- * |'KZ' }]: order by the position of the ticket's origin/destination city for
- * that direction, with cities that have no entry sorted last.
+ * returns). customSorting = [{ id: 'origin'|'destination', order: <routeKey> }]:
+ * order by the position of the ticket's origin/destination city for that
+ * direction, with cities that have no entry sorted last.
  *
- * `id` and `order` are whitelisted before being interpolated into the SQL
- * literal, so the correlated subquery is injection-safe.
+ * `id` is whitelisted and `order` must match ROUTE_KEY_PATTERN before being
+ * interpolated into the SQL literal, so the correlated subquery is
+ * injection-safe.
  */
 function buildCustomSortOrder(parsedCustomSorting) {
   if (!Array.isArray(parsedCustomSorting)) return [];
@@ -553,7 +555,13 @@ function buildCustomSortOrder(parsedCustomSorting) {
   for (const el of parsedCustomSorting) {
     const column = CUSTOM_SORT_COLUMNS[el?.id];
     const routeKey = el?.order;
-    if (!column || !CUSTOM_SORT_ROUTE_KEYS.has(routeKey)) continue;
+    if (
+      !column ||
+      typeof routeKey !== 'string' ||
+      !ROUTE_KEY_PATTERN.test(routeKey)
+    ) {
+      continue;
+    }
 
     const positionExpr =
       `(SELECT rco.position FROM routecityorders AS rco ` +

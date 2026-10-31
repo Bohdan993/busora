@@ -79,7 +79,7 @@ router.get(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        throw APIError.ValidationError('Помилка при валідації', errors.array());
+        throw APIError.ValidationError('validation error', errors.array());
       }
       const { currencyAbbr, fields } = req?.query ?? {};
 

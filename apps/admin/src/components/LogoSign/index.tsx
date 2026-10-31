@@ -39,11 +39,11 @@ const TooltipWrapper = styled(({ className, ...props }: TooltipProps) => (
 
 function Logo() {
   return (
-    <TooltipWrapper title="Busreisen Адмін Панель" arrow>
+    <TooltipWrapper title="Busora Адмін Панель" arrow>
       <LogoWrapper to="/home">
         <LogoImg
-          src={`${process.env.PUBLIC_URL}/static/images/logo/logo_benz_express.png`}
-          alt="Benz Express"
+          src={`${process.env.PUBLIC_URL}/static/images/logo/logo_busora.png`}
+          alt="Busora"
         />
       </LogoWrapper>
     </TooltipWrapper>

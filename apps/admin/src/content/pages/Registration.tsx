@@ -5,7 +5,6 @@ import TextField from '@mui/material/TextField';
 import Link from '@mui/material/Link';
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -29,9 +28,7 @@ function Copyright(props: any) {
       {...props}
     >
       {'Copyright © '}
-      <Link color="inherit" href="https://busreisen.com.ua">
-        Busreisen
-      </Link>{' '}
+      {'Busora '}
       {new Date().getFullYear()}
       {'.'}
     </Typography>
@@ -174,9 +171,11 @@ export default function SignIn() {
                 <AlertTitle>{error.message}</AlertTitle>
               </Alert>
             ))}
-          <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-            <LockOutlinedIcon />
-          </Avatar>
+          <Avatar
+            alt="Busora"
+            src={`${process.env.PUBLIC_URL}/static/images/logo/logo_busora.png`}
+            sx={{ m: 1, width: 56, height: 56 }}
+          />
           <Typography component="h1" variant="h5">
             Реєстрація
           </Typography>

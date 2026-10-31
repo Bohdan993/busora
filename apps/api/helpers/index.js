@@ -3,6 +3,7 @@
 const path = require('path');
 const fs = require('fs');
 const constants = require('@helpers/constants.js');
+const { isSupportedLocale } = require('@root/config/market');
 
 function isOneWay(date) {
   return String(date) === constants.ONE_WAY;
@@ -22,7 +23,15 @@ function isSpecialDate(date) {
   );
 }
 
+// Both parts end up in a require() path, so only known locales and bare file
+// names are accepted — anything else could load arbitrary modules.
 function loadLanguageFile(fileName, languageCode) {
+  if (!isSupportedLocale(languageCode)) {
+    throw new Error(`Unsupported locale: ${languageCode}`);
+  }
+  if (typeof fileName !== 'string' || path.basename(fileName) !== fileName) {
+    throw new Error(`Invalid language file name: ${fileName}`);
+  }
   return require(path.resolve('languages', languageCode, fileName));
 }
 

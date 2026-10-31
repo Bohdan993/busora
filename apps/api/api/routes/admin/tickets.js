@@ -53,11 +53,10 @@ const {
   transformTimestampToDate,
   transformDate
 } = require('@helpers');
-const {
-  strToSign,
-  getCurrencyExchangeRate
-} = require('@services/paymentService');
+const { getPaymentProvider } = require('@services/payments');
+const { getExchangeRate } = require('@services/exchangeRates');
 const { sendFileMail, getTicketSubject } = require('@services/mailService');
+const { getLanguageCodeById } = require('@services/languageService');
 const {
   resolveMetaId,
   getConfirmationTypes,
@@ -65,7 +64,7 @@ const {
   getTicketTypes
 } = require('@services/ticketMetaService');
 const {
-  buildTicketQuery,
+  loadTicketWithRelations,
   generatePerPassengerPDFs,
   persistPerPassengerPDFs
 } = require('@services/admin/ticketPdfService');
@@ -86,17 +85,17 @@ const router = Router();
 //
 // The admin UI enters and shows every money amount in UAH, and UAH is the stored
 // truth (priceUAH / paymentAtOfficeUAH / paymentOnBusUAH). A ticket also keeps
-// its booking-currency columns (EUR for DE-origin, UAH for UA-origin) for the
+// its booking-currency columns (CZK for CZ-origin, UAH for UA-origin) for the
 // customer-facing price/PDF; those are the DERIVED side = round(UAH / rate).
 // These helpers resolve the UAH truth from the request and derive booking from it.
 
 // Resolve the UAH-per-1-unit rate for a currency: UAH → 1, otherwise the live
-// PrivatBank rate. A lookup failure falls back (to the ticket's locked rate or
-// 1) so a flaky rate API never blocks an edit.
+// NBU rate. A lookup failure falls back (to the ticket's locked rate or 1) so a
+// flaky rate API never blocks an edit.
 async function resolveCurrencyRate(currency, fallback = 1) {
   if (!currency || String(currency).toUpperCase() === 'UAH') return 1;
   try {
-    return await getCurrencyExchangeRate({ abbr: currency });
+    return await getExchangeRate(String(currency).toUpperCase());
   } catch {
     return Number(fallback) || 1;
   }
@@ -789,12 +788,9 @@ router.post(
         languageCode: 'uk_UA',
         date: currDate
       };
+      const { sign } = getPaymentProvider();
       const infoData = Buffer.from(JSON.stringify(infoObj)).toString('base64');
-      const infoDataSignature = strToSign(
-        process.env.LIQPAY_PRIVATE_KEY +
-          infoData +
-          process.env.LIQPAY_PRIVATE_KEY
-      );
+      const infoDataSignature = sign(infoData);
 
       const signatureObj = {
         action: 'pay',
@@ -808,11 +804,7 @@ router.post(
       const signatureData = Buffer.from(JSON.stringify(signatureObj)).toString(
         'base64'
       );
-      const signature = strToSign(
-        process.env.LIQPAY_PRIVATE_KEY +
-          signatureData +
-          process.env.LIQPAY_PRIVATE_KEY
-      );
+      const signature = sign(signatureData);
 
       const ticket = await createTicket({
         transactionId: uuidv4(),
@@ -1168,6 +1160,16 @@ router.post(
       }
       const { id, email, passengerId } = req?.body ?? {};
 
+      // The email (subject, city names, body) is in the booking language
+      const ticketLanguage = await Ticket.findByPk(id, {
+        attributes: ['languageId']
+      });
+      if (!ticketLanguage) {
+        throw AdminAPIError.NotFoundError(`Квиток з id ${id} не знайдено`);
+      }
+      const { languageId } = ticketLanguage;
+      const languageCode = await getLanguageCodeById(languageId);
+
       const ticket = await Ticket.findOne({
         attributes: [
           'id',
@@ -1186,7 +1188,7 @@ router.post(
                 model: CityAttributes,
                 as: 'cityattrs',
                 attributes: ['name'],
-                where: { languageId: { [Op.eq]: 1 } }
+                where: { languageId: { [Op.eq]: languageId } }
               }
             ]
           },
@@ -1198,7 +1200,7 @@ router.post(
                 model: CityAttributes,
                 as: 'cityattrs',
                 attributes: ['name'],
-                where: { languageId: { [Op.eq]: 1 } }
+                where: { languageId: { [Op.eq]: languageId } }
               }
             ]
           },
@@ -1223,17 +1225,20 @@ router.post(
         throw AdminAPIError.NotFoundError(`Квиток з id ${id} не знайдено`);
       }
 
-      const subject = getTicketSubject({
-        cities: {
-          from: { name: ticket?.originCity?.cityattrs?.[0]?.name },
-          to: { name: ticket?.destinationCity?.cityattrs?.[0]?.name }
+      const subject = getTicketSubject(
+        {
+          cities: {
+            from: { name: ticket?.originCity?.cityattrs?.[0]?.name },
+            to: { name: ticket?.destinationCity?.cityattrs?.[0]?.name }
+          },
+          dates: {
+            departure: transformDate(ticket?.dateOfDeparture, languageCode),
+            return: transformDate(ticket?.dateOfReturn, languageCode)
+          },
+          type: ticket?.typeMeta?.meta_key
         },
-        dates: {
-          departure: transformDate(ticket?.dateOfDeparture),
-          return: transformDate(ticket?.dateOfReturn)
-        },
-        type: ticket?.typeMeta?.meta_key
-      });
+        languageCode
+      );
 
       let pdfPaths;
 
@@ -1305,6 +1310,7 @@ router.post(
         email,
         pdfPaths,
         subject,
+        languageCode,
         sendAdminEmail: false
       });
 
@@ -1352,7 +1358,6 @@ router.get(
           "id",
           "signature",
           "PDFFileName",
-          "children",
           "dateOfDeparture",
           "dateOfReturn",
           "typeId",
@@ -1497,8 +1502,7 @@ router.post(
       const { id, passengerId } = req?.body ?? {};
 
       // Fetch ticket with all necessary relations
-      const query = buildTicketQuery(id);
-      const ticket = await Ticket.findOne(query);
+      const ticket = await loadTicketWithRelations(id);
 
       if (!ticket) {
         throw AdminAPIError.NotFoundError(`Квиток з id ${id} не знайдено`);
@@ -1535,9 +1539,8 @@ router.post(
 
       console.log('perPassengerResults: ', perPassengerResults);
 
-      // Write the new PDF filenames back to the database:
-      //  - adults → PassengerTicket.PDFFileName
-      //  - children → pdfFileName property inside ticket.children JSON
+      // Write the new PDF filenames back to PassengerTicket.PDFFileName
+      // (adults and children alike)
       await persistPerPassengerPDFs(ticket, perPassengerResults);
 
       return res.json({
@@ -2050,19 +2053,6 @@ router.put(
         discountPercentage: discountPercentageValue,
         originId: origin?.id,
         destinationId: destination?.id
-        // "children": JSON.stringify(children.reduce((acc, curr, ind) => {
-        //     acc["child-passenger-" + (ind + passengers.length + 1)] = {
-        //         ["name-" + (ind + passengers.length + 1)]: curr?.name,
-        //         ["last-name-" + (ind + passengers.length + 1)]: curr?.lastName,
-        //         ["date-of-birth-" + (ind + passengers.length + 1)]: Date.parse(curr?.dateOfBirth),
-        //         ["discount-" + (ind + passengers.length + 1)]: curr?.passengerDiscount?.id,
-        //         ["discount-percentage-" + (ind + passengers.length + 1)]: curr?.passengerDiscount?.percentage,
-        //         ["discount-name-" + (ind + passengers.length + 1)]: curr?.passengerDiscount?.name,
-        //         // ['full-ticket-price-'+ (ind + 1)]: curr?.passengerDiscount?.name,
-        //         // ['discount-ticket-price-'+ (ind + 1)]: curr?.passengerDiscount?.name,
-        //     };
-        //     return acc;
-        // }, {})),
       });
       const queryOpts = {
         where: {

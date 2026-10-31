@@ -1,0 +1,12 @@
+{
+  "name": "busora",
+  "private": true,
+  "description": "Busora monorepo tooling (git hooks). Each app has its own package.json.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11"
+  }
+}

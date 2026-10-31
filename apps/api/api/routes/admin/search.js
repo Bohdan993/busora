@@ -35,10 +35,7 @@ const {
   transformTicketBusFlightToString,
   transformTimestampToDate
 } = require('@helpers');
-const {
-  supportsDirection,
-  filterFlatFlightsByCustomRouteGroup
-} = require('@services/busFlightService');
+const { supportsDirection } = require('@services/busFlightService');
 const router = Router();
 
 /**
@@ -295,14 +292,7 @@ router.get(
             : supportsDirection(bf, originId, destinationId)
         );
 
-        // Drop the non-canonical route group when a shared city (e.g. Дрезден /
-        // 12, which sits on both the Düsseldorf and Munich lines) is selected,
-        // so the same pair isn't served by an ambiguous duplicate line.
-        busFlights = filterFlatFlightsByCustomRouteGroup(
-          busFlights,
-          originId,
-          destinationId
-        ).slice(0, 4);
+        busFlights = busFlights.slice(0, 4);
       }
 
       return res.json({

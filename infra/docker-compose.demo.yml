@@ -1,0 +1,169 @@
+# Busora public demo: the whole stack on one server, behind Caddy.
+#
+# The server builds the images from this checkout; bin/ci-deploy.sh does it on
+# every merge to main. From the repository root:
+#   docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml up -d --build
+#
+# First start, and whenever you want a clean slate (migrate + seed from empty):
+#   docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml \
+#     run --rm reset node scripts/demoReset.js
+#
+# Only Caddy publishes ports. The runbook is infra/DEMO.md.
+name: busora-demo
+
+x-api-env: &api-env
+  NODE_ENV: production
+  PORT: 5000
+  # Admin activation links point at the admin host, whose /api goes to the API
+  API_URL: https://${DEMO_ADMIN_HOST:?}/api
+  ADMIN_URL: https://${DEMO_ADMIN_HOST:?}
+  CORS_ORIGIN: ""
+  CORS_ORIGIN_ADMIN: https://${DEMO_ADMIN_HOST:?}
+  DEV_HTTPS_KEY_PATH: ""
+  DEV_HTTPS_CERT_PATH: ""
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_NAME: ${DB_NAME:-busora_demo}
+  DB_USER: ${DB_USER:-busora}
+  DB_PASS: ${DB_PASS:?set DB_PASS in demo.env}
+  DB_DIALECT: mysql
+  SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in demo.env}
+  SESSION_COOKIE_SECURE: "true"
+  JWT_SECRET_ACCESS: ${JWT_SECRET_ACCESS:?set JWT_SECRET_ACCESS in demo.env}
+  JWT_SECRET_REFRESH: ${JWT_SECRET_REFRESH:?set JWT_SECRET_REFRESH in demo.env}
+  EXCHANGE_RATE_PROVIDER: ${EXCHANGE_RATE_PROVIDER:-nbu}
+  FIXED_EXCHANGE_RATES: ${FIXED_EXCHANGE_RATES:-}
+  # The demo never takes real payments, whatever demo.env says
+  PAYMENT_PROVIDER: mock
+  MOCK_PAYMENT_SECRET: ${MOCK_PAYMENT_SECRET:?set MOCK_PAYMENT_SECRET in demo.env}
+  # Every email lands in Mailpit: the demo has no route to real inboxes
+  MAIL_HOST: mailpit
+  MAIL_PORT: 1025
+  MAIL_SECURE: "false"
+  MAIL_USER: ${MAIL_USER:-noreply@busora.test}
+  MAIL_PASS: ${MAIL_PASS:-mailpit}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@busora.test}
+  MAILPIT_URL: http://mailpit:8025
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+  RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+  # The private admin logins, created again by every reset
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@busora.test}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+  SEED_MANAGER_EMAIL: ${SEED_MANAGER_EMAIL:-}
+  SEED_MANAGER_PASSWORD: ${SEED_MANAGER_PASSWORD:-}
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  caddy:
+    <<: *restart
+    image: caddy:2-alpine
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in demo.env}
+      DEMO_SITE_HOST: ${DEMO_SITE_HOST:?set DEMO_SITE_HOST in demo.env}
+      DEMO_ADMIN_HOST: ${DEMO_ADMIN_HOST:?set DEMO_ADMIN_HOST in demo.env}
+      DEMO_MAIL_HOST: ${DEMO_MAIL_HOST:?set DEMO_MAIL_HOST in demo.env}
+      MAILPIT_USER: ${MAILPIT_USER:?set MAILPIT_USER in demo.env}
+      MAILPIT_PASSWORD_HASH: ${MAILPIT_PASSWORD_HASH:?set MAILPIT_PASSWORD_HASH in demo.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile.demo:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - admin
+      - api
+      - mailpit
+
+  web:
+    <<: *restart
+    build: ../apps/web
+    image: busora-demo-web
+
+  admin:
+    <<: *restart
+    build: ../apps/admin
+    image: busora-demo-admin
+
+  api:
+    <<: *restart
+    build: ../apps/api
+    image: busora-demo-api
+    environment: *api-env
+    volumes:
+      - api_assets:/app/assets/tickets
+      - api_logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  # Resets the demo every night at 03:00 Kyiv time (scripts/demoReset.js)
+  reset:
+    <<: *restart
+    # The image the api service builds
+    image: busora-demo-api
+    pull_policy: never
+    command: ["node", "scripts/demoReset.js", "--daily"]
+    environment:
+      <<: *api-env
+      DEMO_RESET_ENABLED: "true"
+    volumes:
+      - api_assets:/app/assets/tickets
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  mysql:
+    <<: *restart
+    image: mysql:8.0
+    # Lets the non-SUPER app user create the passengerRowCount triggers
+    command: --log-bin-trust-function-creators=1
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in demo.env}
+      MYSQL_DATABASE: ${DB_NAME:-busora_demo}
+      MYSQL_USER: ${DB_USER:-busora}
+      MYSQL_PASSWORD: ${DB_PASS:?}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # The password comes from the container's env, not this file
+      test:
+        ["CMD-SHELL", 'mysqladmin ping -h localhost -p"$$MYSQL_ROOT_PASSWORD"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    <<: *restart
+    image: redis:7-alpine
+
+  mailpit:
+    <<: *restart
+    image: axllent/mailpit:v1.21
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      # Kept in memory; a restart or the nightly reset empties the inbox
+      MP_MAX_MESSAGES: 500
+
+volumes:
+  api_assets:
+  api_logs:
+  mysql_data:
+  caddy_data:
+  caddy_config:

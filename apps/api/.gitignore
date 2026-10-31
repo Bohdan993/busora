@@ -11,8 +11,7 @@
 # production
 /build
 /assets/tickets
-/database/seeders
-ecosystem.config.js
+/assets/ticket-sample-*.html
 # misc
 .DS_Store
 .env

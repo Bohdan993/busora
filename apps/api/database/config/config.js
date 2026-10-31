@@ -25,6 +25,7 @@ const config = {
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 3306,
     dialect: process.env.DB_DIALECT,
     // Use a different storage. Default: none
     seederStorage: 'sequelize',
@@ -36,32 +37,23 @@ const config = {
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 3306,
     dialect: process.env.DB_DIALECT,
     seederStorage: 'sequelize',
-    logging: (msg) =>
-      console.log(msg, '(Date: ' + new Date().toUTCString() + ')')
+    // Integration tests: SQL logs would bury the test report
+    logging: false
   },
   production: {
     username: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 3306,
     dialect: process.env.DB_DIALECT,
     seederStorage: 'sequelize',
     logging: (msg) =>
       console.log(msg, '(Date: ' + new Date().toUTCString() + ')')
   }
 };
-
-if (process.env.DB_DIALECT === 'postgres') {
-  config.development.dialectOptions = {};
-  config.development.dialectOptions.ssl = process.env.DB_SSL;
-
-  config.test.dialectOptions = {};
-  config.test.dialectOptions.ssl = process.env.DB_SSL;
-
-  config.production.dialectOptions = {};
-  config.production.dialectOptions.ssl = process.env.DB_SSL;
-}
 
 module.exports = config;

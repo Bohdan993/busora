@@ -55,6 +55,8 @@ const translations = {
     full_discount: "Повний і пільговий",
   },
   saleText: "Акційна знижка",
+  demoNoticeText:
+    "Навчальний демо-проєкт: Busora не є реальним перевізником, квиток недійсний для поїздки.",
 };
 
 module.exports = translations;

@@ -1,0 +1,5234 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Busora API",
+    "version": "1.0.0",
+    "description": "Busora bus-ticket booking API (educational demo).\n\n**Booking flow:** cities → search flights → select a flight → passenger form → validate passengers → start checkout → pay (mock page or LiqPay) → ticket summary and PDF download. Booking state lives in a session cookie (`busora-sess`), so a browser client must send credentials; the web app calls the API through a same-origin proxy.\n\n**Errors** share one shape (`ErrorResponse`) with a machine-readable `code`.\n\n**Admin flow:** JWT login required. Access token goes in `Authorization: Bearer <token>` header."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local dev"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Cities",
+      "description": "Public city/country lookup"
+    },
+    {
+      "name": "Network",
+      "description": "Lines, schedule, fares and discounts for the site pages"
+    },
+    {
+      "name": "Currencies",
+      "description": "Currency lookup by abbreviation"
+    },
+    {
+      "name": "Bus Flights",
+      "description": "Flight search and selection"
+    },
+    {
+      "name": "Passengers",
+      "description": "Passenger form and validation"
+    },
+    {
+      "name": "Session",
+      "description": "Booking session state"
+    },
+    {
+      "name": "Payment",
+      "description": "Checkout (mock or LiqPay) and the provider callback"
+    },
+    {
+      "name": "Tickets",
+      "description": "Ticket summary and PDF download after payment"
+    },
+    {
+      "name": "Admin / Auth",
+      "description": "Admin authentication"
+    },
+    {
+      "name": "Admin / Bus Flights",
+      "description": "Admin bus-flight management (CRUD)"
+    },
+    {
+      "name": "Admin / Cities",
+      "description": "Admin city list with route assignments"
+    },
+    {
+      "name": "Admin / Currencies",
+      "description": "Admin currency list"
+    },
+    {
+      "name": "Admin / Discounts",
+      "description": "Admin discount list"
+    },
+    {
+      "name": "Admin / Routes",
+      "description": "Admin route list"
+    },
+    {
+      "name": "Admin / Search",
+      "description": "Admin autocomplete search helpers"
+    },
+    {
+      "name": "Admin / Tickets",
+      "description": "Admin ticket management (CRUD + PDF)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Admin JWT access token obtained from `POST /api/admin/auth/login`"
+      }
+    },
+    "schemas": {
+      "OkStatus": {
+        "type": "string",
+        "enum": [
+          "ok"
+        ],
+        "example": "ok"
+      },
+      "SessionExpiresTime": {
+        "type": "integer",
+        "description": "Booking session lifetime in ms (900000); the session cookie expires this long after it was created.",
+        "example": 900000
+      },
+      "LanguageCode": {
+        "type": "string",
+        "enum": [
+          "uk_UA",
+          "cs_CZ",
+          "en_US"
+        ],
+        "default": "uk_UA"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "fail"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "BAD_REQUEST",
+              "VALIDATION_FAILED",
+              "NOT_FOUND",
+              "INVALID_DATES",
+              "NO_FLIGHTS",
+              "NO_FREE_SEATS",
+              "NO_ALTERNATIVES",
+              "SESSION_NOT_STARTED",
+              "FLIGHT_NOT_SELECTED",
+              "PASSENGERS_MISSING",
+              "EXCHANGE_RATE_UNAVAILABLE",
+              "TOO_MANY_REQUESTS",
+              "SERVER_ERROR"
+            ],
+            "description": "Machine-readable reason. Clients localise their message from this."
+          },
+          "message": {
+            "type": "string",
+            "description": "Developer-facing text, not localised"
+          },
+          "errors": {
+            "description": "Details: a list of `{ field, message }` objects, or for passenger validation a map of field → localised messages.",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "example": {
+          "status": "fail",
+          "code": "NO_FLIGHTS",
+          "message": "no flights found",
+          "errors": []
+        }
+      },
+      "CountryWithNames": {
+        "type": "object",
+        "required": [
+          "id",
+          "countryattrs"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 2
+          },
+          "countryattrs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "Praha"
+                },
+                "languageId": {
+                  "type": "integer",
+                  "example": 2
+                }
+              }
+            }
+          }
+        }
+      },
+      "City": {
+        "type": "object",
+        "required": [
+          "id",
+          "cityattrs",
+          "currency"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 8
+          },
+          "country": {
+            "$ref": "#/components/schemas/CountryWithNames"
+          },
+          "cityattrs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "Praha"
+                },
+                "languageId": {
+                  "type": "integer",
+                  "example": 2
+                }
+              }
+            }
+          },
+          "currency": {
+            "type": "object",
+            "description": "Currency prices are shown in when travelling from here",
+            "properties": {
+              "abbr": {
+                "type": "string",
+                "example": "CZK"
+              },
+              "symbol": {
+                "type": "string",
+                "example": "Kč"
+              }
+            }
+          }
+        }
+      },
+      "CityGroup": {
+        "type": "object",
+        "required": [
+          "country",
+          "cities"
+        ],
+        "properties": {
+          "country": {
+            "$ref": "#/components/schemas/CountryWithNames"
+          },
+          "cities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/City"
+            }
+          }
+        }
+      },
+      "BusFlight": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "busFlightFromId",
+          "cities",
+          "places",
+          "dates",
+          "price",
+          "purePrice"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id of this offer within the current session — pass it to `POST /api/bus-flights/select`.",
+            "example": "main-ticket-0-0-0"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "one-way",
+              "round",
+              "open-date"
+            ]
+          },
+          "busFlightFromId": {
+            "type": "integer",
+            "example": 17
+          },
+          "busFlightToId": {
+            "type": "integer",
+            "example": 46,
+            "nullable": true
+          },
+          "cities": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "example": 8
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Prague"
+                  },
+                  "nameUkr": {
+                    "type": "string",
+                    "example": "Прага"
+                  }
+                }
+              },
+              "to": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "example": 8
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Prague"
+                  },
+                  "nameUkr": {
+                    "type": "string",
+                    "example": "Прага"
+                  }
+                }
+              }
+            }
+          },
+          "places": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "object",
+                "description": "Route and stops of one direction. Empty object for the return leg of a one-way or open-date trip.",
+                "properties": {
+                  "routeId": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "routeName": {
+                    "type": "string",
+                    "example": "Kyiv - Prague"
+                  },
+                  "routeNameUkr": {
+                    "type": "string"
+                  },
+                  "onBoardingPlace": {
+                    "type": "string",
+                    "example": "Kyiv Central Bus Station"
+                  },
+                  "onBoardingPlaceUkr": {
+                    "type": "string"
+                  },
+                  "outBoardingPlace": {
+                    "type": "string",
+                    "example": "Praha Florenc"
+                  },
+                  "outBoardingPlaceUkr": {
+                    "type": "string"
+                  },
+                  "onBoardingTime": {
+                    "type": "string",
+                    "example": "18:00"
+                  },
+                  "outBoardingTime": {
+                    "type": "string",
+                    "example": "14:30"
+                  }
+                }
+              },
+              "to": {
+                "type": "object",
+                "description": "Route and stops of one direction. Empty object for the return leg of a one-way or open-date trip.",
+                "properties": {
+                  "routeId": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "routeName": {
+                    "type": "string",
+                    "example": "Kyiv - Prague"
+                  },
+                  "routeNameUkr": {
+                    "type": "string"
+                  },
+                  "onBoardingPlace": {
+                    "type": "string",
+                    "example": "Kyiv Central Bus Station"
+                  },
+                  "onBoardingPlaceUkr": {
+                    "type": "string"
+                  },
+                  "outBoardingPlace": {
+                    "type": "string",
+                    "example": "Praha Florenc"
+                  },
+                  "outBoardingPlaceUkr": {
+                    "type": "string"
+                  },
+                  "onBoardingTime": {
+                    "type": "string",
+                    "example": "18:00"
+                  },
+                  "outBoardingTime": {
+                    "type": "string",
+                    "example": "14:30"
+                  }
+                }
+              }
+            }
+          },
+          "dates": {
+            "type": "object",
+            "required": [
+              "departure",
+              "departurePure"
+            ],
+            "properties": {
+              "departure": {
+                "type": "string",
+                "description": "Display date in the requested language",
+                "example": "07 Nov. 2026"
+              },
+              "departureUkr": {
+                "type": "string"
+              },
+              "departurePure": {
+                "type": "string",
+                "format": "date"
+              },
+              "return": {
+                "type": "string",
+                "example": "14 Nov. 2026",
+                "nullable": true
+              },
+              "returnUkr": {
+                "type": "string",
+                "nullable": true
+              },
+              "returnPure": {
+                "type": "string",
+                "description": "ISO date, or `one-way` / `open-date`",
+                "example": "2026-11-14",
+                "nullable": true
+              }
+            }
+          },
+          "discountPercentage": {
+            "type": "number",
+            "description": "Promo discount on this flight, 0 when none",
+            "example": 0
+          },
+          "purePriceFull": {
+            "type": "string",
+            "description": "Price per passenger before the promo, digits only",
+            "example": "2250"
+          },
+          "purePrice": {
+            "type": "string",
+            "description": "Price per passenger in the search currency, digits only",
+            "example": "2250"
+          },
+          "priceFull": {
+            "type": "string",
+            "example": "2250 Kč"
+          },
+          "price": {
+            "type": "string",
+            "example": "2250 Kč"
+          },
+          "hasDiscount": {
+            "type": "boolean"
+          },
+          "isSelected": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlternativeDay": {
+        "type": "object",
+        "required": [
+          "date",
+          "flights"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "flights": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BusFlight"
+            }
+          }
+        }
+      },
+      "SelectFlightRequest": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "`id` of a returned offer"
+          },
+          "isMain": {
+            "type": "boolean",
+            "default": true,
+            "description": "`true` for an offer from the main search, `false` for one from the alternatives"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "forwards",
+              "backwards"
+            ],
+            "default": "forwards",
+            "description": "For alternatives: outbound (forwards) or return leg"
+          }
+        }
+      },
+      "DiscountGroup": {
+        "type": "object",
+        "required": [
+          "group",
+          "items"
+        ],
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": [
+              "children",
+              "adults",
+              "both",
+              "discount-card"
+            ],
+            "description": "Which passengers the discounts apply to"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "coef",
+                "minAge",
+                "maxAge"
+              ],
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 3
+                },
+                "name": {
+                  "type": "string",
+                  "example": "Children aged 5 to 11 - 20%.",
+                  "nullable": true
+                },
+                "coef": {
+                  "type": "number",
+                  "description": "Share taken off the price",
+                  "example": 0.2
+                },
+                "minAge": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "maxAge": {
+                  "type": "integer",
+                  "example": 11,
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "PassengersInfo": {
+        "type": "object",
+        "description": "Passenger details as validated and stored in the session. Keys are `adult-passenger-N` / `child-passenger-N`; each value holds fields suffixed with the same N (`name-N`, `last-name-N`, `phone-N`, `email-N`, `date-of-birth-N`, `discount-N`, `card-discount-N`) plus the computed `full-ticket-price-N`, `discount-ticket-price-N` and `discount-percentage-N`.",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        },
+        "example": {
+          "adult-passenger-1": {
+            "name-1": "Jana",
+            "last-name-1": "Novakova",
+            "phone-1": "+420601123456",
+            "email-1": "jana@example.test",
+            "date-of-birth-1": "1985-03-20"
+          },
+          "child-passenger-2": {
+            "name-2": "Eva",
+            "last-name-2": "Novakova",
+            "date-of-birth-2": "2019-05-05",
+            "discount-2": "3"
+          }
+        }
+      },
+      "PassengerForm": {
+        "type": "object",
+        "required": [
+          "adults",
+          "children",
+          "ticketPrice",
+          "currency",
+          "showDiscounts",
+          "discounts",
+          "passengersInfo"
+        ],
+        "properties": {
+          "adults": {
+            "type": "integer",
+            "example": 2
+          },
+          "children": {
+            "type": "integer",
+            "example": 1
+          },
+          "ticketPrice": {
+            "type": "number",
+            "description": "Price per passenger before personal discounts",
+            "example": 1590
+          },
+          "currency": {
+            "type": "object",
+            "properties": {
+              "abbr": {
+                "type": "string",
+                "example": "CZK"
+              },
+              "symbol": {
+                "type": "string",
+                "example": "Kč"
+              }
+            }
+          },
+          "showDiscounts": {
+            "type": "boolean",
+            "description": "False when the selected flight already has a promo — personal discounts do not stack with it"
+          },
+          "discounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountGroup"
+            }
+          },
+          "passengersInfo": {
+            "$ref": "#/components/schemas/PassengersInfo",
+            "description": "Details entered earlier in this session, for prefilling",
+            "nullable": true
+          }
+        }
+      },
+      "ValidatePassengersRequest": {
+        "type": "object",
+        "required": [
+          "passengersData"
+        ],
+        "properties": {
+          "passengersData": {
+            "$ref": "#/components/schemas/PassengersInfo"
+          }
+        }
+      },
+      "CurrentData": {
+        "type": "object",
+        "required": [
+          "adults",
+          "children",
+          "price",
+          "startDate",
+          "currencySymbol"
+        ],
+        "properties": {
+          "adults": {
+            "type": "integer",
+            "example": 2
+          },
+          "children": {
+            "type": "integer",
+            "example": 1
+          },
+          "price": {
+            "type": "number",
+            "description": "Total for all passengers in the search currency, after discounts",
+            "example": 4452
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "ISO date, or `one-way` / `open-date`"
+          },
+          "bookingPageParams": {
+            "type": "string",
+            "description": "Opaque client state saved with `POST /api/current-data`",
+            "nullable": true
+          },
+          "currencySymbol": {
+            "type": "string",
+            "example": "Kč"
+          }
+        }
+      },
+      "SessionUpdateRequest": {
+        "type": "object",
+        "required": [
+          "bookingPageParams"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "bookingPageParams": {
+            "type": "string",
+            "description": "Opaque client state (e.g. the booking page query string). The only key a client may write."
+          }
+        }
+      },
+      "SignedPayload": {
+        "type": "object",
+        "required": [
+          "data",
+          "signature"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Base64-encoded JSON in LiqPay format (`order_id`, `amount`, `currency`, `status`, `transaction_id`, …)"
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      },
+      "Checkout": {
+        "type": "object",
+        "required": [
+          "provider",
+          "data",
+          "signature",
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "liqpay"
+            ]
+          },
+          "data": {
+            "type": "string",
+            "description": "Base64-encoded JSON checkout"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Amount to be charged, in UAH",
+            "example": 9268
+          },
+          "currency": {
+            "type": "string",
+            "example": "UAH"
+          }
+        }
+      },
+      "MockCompleteRequest": {
+        "type": "object",
+        "required": [
+          "data",
+          "signature",
+          "outcome"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "`data` from the checkout"
+          },
+          "signature": {
+            "type": "string",
+            "description": "`signature` from the checkout"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "failure"
+            ]
+          }
+        }
+      },
+      "MockCompletion": {
+        "type": "object",
+        "required": [
+          "outcome",
+          "data",
+          "signature"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "failure"
+            ]
+          },
+          "data": {
+            "type": "string",
+            "description": "Signed payment result — pass it with `signature` to the ticket summary and download endpoints"
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      },
+      "TicketSummary": {
+        "type": "object",
+        "required": [
+          "ticketNumber",
+          "dateOfDeparture",
+          "origin",
+          "destination",
+          "amountPaid",
+          "passengers"
+        ],
+        "properties": {
+          "ticketNumber": {
+            "type": "string",
+            "example": "000105"
+          },
+          "languageCode": {
+            "$ref": "#/components/schemas/LanguageCode",
+            "nullable": true
+          },
+          "dateOfDeparture": {
+            "type": "string",
+            "format": "date"
+          },
+          "dateOfReturn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "origin": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "destination": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "amountPaid": {
+            "type": "object",
+            "required": [
+              "amount",
+              "currency"
+            ],
+            "properties": {
+              "amount": {
+                "type": "number",
+                "example": 9268
+              },
+              "currency": {
+                "type": "string",
+                "example": "UAH"
+              }
+            }
+          },
+          "passengers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "adult",
+                    "child"
+                  ],
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "NetworkStop": {
+        "type": "object",
+        "required": [
+          "kind",
+          "cityId",
+          "placeId",
+          "placeName",
+          "time",
+          "dayOffset"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "boarding",
+              "dropOff"
+            ],
+            "description": "Passengers board at boarding stops and leave at drop-off stops"
+          },
+          "cityId": {
+            "type": "integer",
+            "example": 1
+          },
+          "placeId": {
+            "type": "integer",
+            "example": 1
+          },
+          "placeName": {
+            "type": "string",
+            "example": "Kyiv Central Bus Station",
+            "nullable": true
+          },
+          "time": {
+            "type": "string",
+            "example": "07:00",
+            "description": "Local time, HH:MM"
+          },
+          "dayOffset": {
+            "type": "integer",
+            "example": 0,
+            "description": "Days after departure from the first stop (0 = same day)"
+          }
+        }
+      },
+      "NetworkDirection": {
+        "type": "object",
+        "required": [
+          "routeId",
+          "name",
+          "countryId",
+          "weekdays",
+          "stops"
+        ],
+        "properties": {
+          "routeId": {
+            "type": "integer",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "Kyiv - Prague",
+            "nullable": true
+          },
+          "countryId": {
+            "type": "integer",
+            "description": "Country the direction starts in"
+          },
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Departure days from the first stop, 0 = Sunday",
+            "example": [
+              2,
+              4,
+              6
+            ]
+          },
+          "stops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkStop"
+            }
+          }
+        }
+      },
+      "NetworkLine": {
+        "type": "object",
+        "required": [
+          "id",
+          "directions"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "directions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkDirection"
+            },
+            "description": "Outbound first (lower route id), then inbound"
+          }
+        }
+      },
+      "NetworkCity": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "country",
+          "currency"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 8
+          },
+          "name": {
+            "type": "string",
+            "example": "Praha",
+            "nullable": true
+          },
+          "country": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 2
+              },
+              "name": {
+                "type": "string",
+                "example": "Česko",
+                "nullable": true
+              }
+            }
+          },
+          "currency": {
+            "type": "object",
+            "required": [
+              "abbr",
+              "symbol"
+            ],
+            "description": "Currency fares from this city are shown in",
+            "properties": {
+              "abbr": {
+                "type": "string",
+                "example": "CZK",
+                "nullable": true
+              },
+              "symbol": {
+                "type": "string",
+                "example": "Kč",
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "Fare": {
+        "type": "object",
+        "required": [
+          "fromCityId",
+          "toCityId",
+          "currency",
+          "oneWay",
+          "roundTrip"
+        ],
+        "properties": {
+          "fromCityId": {
+            "type": "integer",
+            "example": 8
+          },
+          "toCityId": {
+            "type": "integer",
+            "example": 1
+          },
+          "currency": {
+            "type": "string",
+            "example": "CZK",
+            "nullable": true
+          },
+          "oneWay": {
+            "type": "number",
+            "example": 1590
+          },
+          "roundTrip": {
+            "type": "number",
+            "example": 2860
+          }
+        }
+      },
+      "Network": {
+        "type": "object",
+        "required": [
+          "cities",
+          "lines",
+          "fares"
+        ],
+        "properties": {
+          "cities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkCity"
+            }
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkLine"
+            }
+          },
+          "fares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Fare"
+            }
+          }
+        }
+      },
+      "CitiesResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CityGroup"
+            }
+          }
+        }
+      },
+      "BusFlightsResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data",
+          "sessionExpiresTime"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BusFlight"
+            }
+          },
+          "sessionExpiresTime": {
+            "$ref": "#/components/schemas/SessionExpiresTime"
+          }
+        }
+      },
+      "AlternativesResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data",
+          "sessionExpiresTime"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlternativeDay"
+            }
+          },
+          "sessionExpiresTime": {
+            "$ref": "#/components/schemas/SessionExpiresTime"
+          }
+        }
+      },
+      "AvailableDatesResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        }
+      },
+      "PassengerFormResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data",
+          "sessionExpiresTime"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PassengerForm"
+          },
+          "sessionExpiresTime": {
+            "$ref": "#/components/schemas/SessionExpiresTime"
+          }
+        }
+      },
+      "CurrentDataResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data",
+          "sessionExpiresTime"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CurrentData"
+          },
+          "sessionExpiresTime": {
+            "$ref": "#/components/schemas/SessionExpiresTime"
+          }
+        }
+      },
+      "CheckoutResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data",
+          "sessionExpiresTime"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Checkout"
+          },
+          "sessionExpiresTime": {
+            "$ref": "#/components/schemas/SessionExpiresTime"
+          }
+        }
+      },
+      "MockCompletionResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MockCompletion"
+          }
+        }
+      },
+      "TicketSummaryResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketSummary"
+          }
+        }
+      },
+      "NetworkResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Network"
+          }
+        }
+      },
+      "DiscountsResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountGroup"
+            }
+          }
+        }
+      },
+      "SessionOkResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "sessionExpiresTime"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "sessionExpiresTime": {
+            "$ref": "#/components/schemas/SessionExpiresTime"
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          }
+        }
+      },
+      "AdminErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "The error message",
+            "example": "Користувач не авторизований"
+          },
+          "error": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "totalRowCount": {
+            "type": "integer",
+            "example": 142
+          },
+          "startPage": {
+            "type": "integer",
+            "example": 0
+          },
+          "timestamp": {
+            "type": "integer",
+            "example": 1717000000000
+          }
+        }
+      },
+      "BusFlightTableRow": {
+        "type": "object",
+        "properties": {
+          "busFlightId": {
+            "type": "string",
+            "example": "2165"
+          },
+          "allSeats": {
+            "type": "integer",
+            "example": 50
+          },
+          "freeSeats": {
+            "type": "integer",
+            "example": 12
+          },
+          "routeId": {
+            "type": "string",
+            "example": "3"
+          },
+          "route": {
+            "type": "string",
+            "example": "Київ — Штутгарт"
+          },
+          "dateOfDeparture": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-06-19"
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 20
+          }
+        }
+      },
+      "BusFlightDetail": {
+        "type": "object",
+        "properties": {
+          "busFlightId": {
+            "type": "string",
+            "example": "2165"
+          },
+          "allSeats": {
+            "type": "integer",
+            "example": 50
+          },
+          "freeSeats": {
+            "type": "integer",
+            "example": 12
+          },
+          "dateOfDeparture": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-06-19"
+          },
+          "discount": {
+            "type": "integer",
+            "example": 20
+          },
+          "route": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "groupBy": {
+                "type": "string",
+                "description": "Country name"
+              }
+            }
+          }
+        }
+      },
+      "AdminTicketRow": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "example": "4149"
+          },
+          "ticketNumber": {
+            "type": "string",
+            "example": "#004249"
+          },
+          "dateOfDeparture": {
+            "type": "string",
+            "format": "date"
+          },
+          "dateOfReturn": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "origin": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "destination": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "price": {
+            "type": "number",
+            "example": 4880,
+            "description": "Ticket total; the sum of every passenger's price."
+          },
+          "passengerPrice": {
+            "type": "number",
+            "nullable": true,
+            "example": 1627,
+            "description": "This passenger's price: (paymentAtOffice + paymentOnBus) × discount multiplier."
+          },
+          "currency": {
+            "type": "string",
+            "example": "UAH"
+          },
+          "type": {
+            "type": "object",
+            "description": "Ticket type ({ id, name }); id is the ticket_type meta id.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "5"
+              },
+              "name": {
+                "type": "string",
+                "example": "В одну сторону"
+              }
+            }
+          },
+          "status": {
+            "type": "object",
+            "description": "Ticket status ({ id, name }); id is the ticket_status meta id.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "2"
+              },
+              "name": {
+                "type": "string",
+                "example": "Оплачено"
+              }
+            }
+          },
+          "passengerType": {
+            "type": "object",
+            "description": "Passenger type; id/name are the enum value (adult|child).",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "adult"
+              },
+              "name": {
+                "type": "string",
+                "example": "adult"
+              }
+            }
+          },
+          "agent": {
+            "type": "object",
+            "description": "Assigned agent ({ id, name }); id \"0\" = no agent.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "0"
+              },
+              "name": {
+                "type": "string",
+                "example": "Без агента"
+              }
+            }
+          },
+          "passengerConfirmation": {
+            "type": "object",
+            "description": "Confirmation status ({ id, name }); id \"0\" = none.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "0"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true,
+                "example": null
+              }
+            }
+          },
+          "hasDiscount": {
+            "type": "boolean"
+          },
+          "discountPercentage": {
+            "type": "number",
+            "example": 20
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/tickets": {
+      "post": {
+        "summary": "Create the ticket after a LiqPay widget payment",
+        "description": "Called by the browser after the LiqPay widget reports success, racing the server callback. Creates the ticket and its per-passenger PDFs if the callback has not yet; idempotent per transaction.\n",
+        "tags": [
+          "Tickets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket created or already existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST — invalid signature or unsuccessful payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/summary": {
+      "post": {
+        "summary": "Summary of a paid booking for the success page",
+        "description": "Takes the signed payment result returned by the payment step and answers with the ticket in plain JSON. Ends the booking session.\n",
+        "tags": [
+          "Tickets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TicketSummary"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No ticket for this payment (yet)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/download-pdf": {
+      "post": {
+        "summary": "Download the ticket PDFs",
+        "description": "One PDF for a single passenger, otherwise a ZIP with one PDF per passenger.",
+        "tags": [
+          "Tickets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PDF file or ZIP archive",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST — invalid signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND — no ticket for this payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/payment-fail": {
+      "post": {
+        "summary": "Report a failed LiqPay widget payment",
+        "description": "Logs the failure and ends the booking session.",
+        "tags": [
+          "Tickets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "data"
+                ],
+                "properties": {
+                  "data": {
+                    "$ref": "#/components/schemas/SignedPayload"
+                  },
+                  "errMsg": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST — invalid signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/current-data": {
+      "get": {
+        "summary": "Booking summary for the review step",
+        "tags": [
+          "Session"
+        ],
+        "responses": {
+          "200": {
+            "description": "Current booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentDataResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SESSION_NOT_STARTED (no or expired booking session) or FLIGHT_NOT_SELECTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Save client state in the booking session",
+        "description": "Stores bookingPageParams so the client can restore its booking page. Any other key, or a non-string value, is rejected with 400 — prices, rates and passenger data are only ever set by the server.\n",
+        "tags": [
+          "Session"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST — a key other than bookingPageParams",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SESSION_NOT_STARTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/current-data/is-started": {
+      "get": {
+        "summary": "Whether a booking session is active",
+        "tags": [
+          "Session"
+        ],
+        "responses": {
+          "200": {
+            "description": "Session active",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "active"
+                  ],
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SESSION_NOT_STARTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment": {
+      "post": {
+        "summary": "Start checkout for the current booking",
+        "description": "Recalculates the price on the server, saves the booking for the payment callback and returns a checkout signed by the configured provider. With provider liqpay, open the LiqPay widget with data and signature. With provider mock, show a fake payment page and finish it with POST /api/payment/mock/complete.\n",
+        "tags": [
+          "Payment"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed checkout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SESSION_NOT_STARTED, FLIGHT_NOT_SELECTED or PASSENGERS_MISSING",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "EXCHANGE_RATE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment/mock/complete": {
+      "post": {
+        "summary": "Finish a mock checkout (demo payments only)",
+        "description": "Available only when PAYMENT_PROVIDER is mock. On success the ticket, per-passenger PDFs and email are produced exactly as for a real payment; completing the same checkout again creates nothing new. The returned data and signature work with /api/tickets/summary and /api/tickets/download-pdf.\n",
+        "tags": [
+          "Payment"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MockCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment result with its signed payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MockCompletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST — invalid signature or outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND — the mock provider is not enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment/liqpay-callback": {
+      "post": {
+        "summary": "LiqPay server-to-server payment callback",
+        "description": "Webhook called directly by LiqPay servers after payment is processed (PAYMENT_PROVIDER=liqpay). Verifies the signature, creates/reuses the ticket, generates PDFs, sends confirmation emails, and cleans up expired sessions. **This endpoint should not be called manually.**\n",
+        "tags": [
+          "Payment"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "data",
+                  "signature"
+                ],
+                "properties": {
+                  "data": {
+                    "type": "string",
+                    "description": "Base64-encoded JSON payment data from LiqPay"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "base64(sha1(private_key + data + private_key))"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Callback processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid signature or unsuccessful payment"
+          }
+        }
+      }
+    },
+    "/api/passengers": {
+      "get": {
+        "summary": "Data for the passenger form",
+        "description": "Passenger counts, the price per passenger, the personal discounts that can be chosen (names in languageCode) and any details entered earlier.\n",
+        "tags": [
+          "Passengers"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Passenger form data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassengerFormResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SESSION_NOT_STARTED (no or expired booking session) or FLIGHT_NOT_SELECTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/passengers/validate": {
+      "post": {
+        "summary": "Validate passenger details and save them to the booking",
+        "description": "Phones must be Ukrainian (+380) or Czech (+420). The first adult's email receives the tickets. Must succeed before POST /api/payment.\n",
+        "tags": [
+          "Passengers"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidatePassengersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Details valid and saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SESSION_NOT_STARTED (no or expired booking session) or FLIGHT_NOT_SELECTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED; errors maps each invalid field to messages in languageCode",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/network": {
+      "get": {
+        "summary": "The bus network for the routes, schedule and fares pages",
+        "description": "Cities, the lines with both directions (stops, times, the weekdays they run) and every fare in UAH and CZK. Public and cacheable; it does not touch the booking session.\n",
+        "tags": [
+          "Network"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The network",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown language code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discounts": {
+      "get": {
+        "summary": "Personal discounts, for the fares page",
+        "description": "Every personal discount, including those that are seasonally inactive today (their name says when). Booking offers only the currently valid ones, via GET /api/passengers.\n",
+        "tags": [
+          "Network"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discounts by passenger group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown language code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/currencies": {
+      "get": {
+        "summary": "Get currencies by abbreviation",
+        "tags": [
+          "Currencies"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "currencyAbbr",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "UAH,EUR"
+            },
+            "description": "Comma-separated ISO 4217 currency codes (max 10). Repeated array format also accepted."
+          },
+          {
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "type": "string",
+              "example": "name,abbr,symbol"
+            },
+            "description": "Comma-separated extra fields to include (allowed: name, abbr, symbol). id is always returned."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching currency records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "example": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Гривня"
+                          },
+                          "abbr": {
+                            "type": "string",
+                            "example": "UAH"
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "example": "₴"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing or invalid abbreviation)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cities": {
+      "get": {
+        "summary": "Cities grouped by country",
+        "description": "Only cities that have a name in the requested language are listed.",
+        "tags": [
+          "Cities"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "excludedCountry",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Leave out this country's cities"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cities by country",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CitiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown language code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bus-flights": {
+      "get": {
+        "summary": "Search bus flights (starts a booking)",
+        "description": "Returns the offers for a route and date. Starts a new booking session (sets the session cookie) with the first offer pre-selected; the other booking endpoints work on this session.\n",
+        "tags": [
+          "Bus Flights"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "originId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "destinationId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 8
+            }
+          },
+          {
+            "in": "query",
+            "name": "adults",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1,
+              "example": 2
+            }
+          },
+          {
+            "in": "query",
+            "name": "children",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "example": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "currencyAbbr",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "CZK"
+            },
+            "description": "Currency of the returned prices (UAH or CZK)"
+          },
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-11-20"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "one-way"
+            },
+            "description": "Return date (round trip), or one-way / open-date"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offers, first one selected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusFlightsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST (ids, unknown currency) or INVALID_DATES",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NO_FLIGHTS or NO_FREE_SEATS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "EXCHANGE_RATE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bus-flights/alternatives": {
+      "get": {
+        "summary": "Nearest later flights for one direction",
+        "description": "Up to three departure dates after startDate with free seats. For the outbound direction without a selected flight this starts a new booking session, like the main search.\n",
+        "tags": [
+          "Bus Flights"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "originId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "destinationId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 8
+            }
+          },
+          {
+            "in": "query",
+            "name": "adults",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1,
+              "example": 2
+            }
+          },
+          {
+            "in": "query",
+            "name": "children",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "example": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "currencyAbbr",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "CZK"
+            },
+            "description": "Currency of the returned prices (UAH or CZK)"
+          },
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Alternatives depart after this date"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "one-way"
+            },
+            "description": "Return date (round trip), or one-way / open-date"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "forwards",
+                "backwards"
+              ],
+              "default": "forwards"
+            },
+            "description": "forwards for the outbound leg, backwards for the return leg"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offers grouped by departure date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlternativesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST or INVALID_DATES",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NO_ALTERNATIVES or NO_FREE_SEATS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "EXCHANGE_RATE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bus-flights/available-dates": {
+      "get": {
+        "summary": "Bookable departure dates for the calendar",
+        "description": "Dates with at least one flight with free seats for the city pair.",
+        "tags": [
+          "Bus Flights"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "originId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "destinationId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Only dates on or after this one (defaults to today)"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "forwards",
+                "backwards"
+              ],
+              "default": "forwards"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ISO dates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailableDatesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST (ids)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bus-flights/select": {
+      "post": {
+        "summary": "Select an offer for the booking",
+        "description": "Selects an offer returned by the search or the alternatives in this session. For a round trip from alternatives, select the outbound offer (direction forwards) and then the return offer (direction backwards).\n",
+        "tags": [
+          "Bus Flights"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectFlightRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Offer selected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BAD_REQUEST — no such offer in this session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SESSION_NOT_STARTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/tickets": {
+      "get": {
+        "summary": "List tickets (paginated, filterable, sortable)",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 10
+            }
+          },
+          {
+            "in": "query",
+            "name": "filters",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "[]"
+            }
+          },
+          {
+            "in": "query",
+            "name": "filtersFns",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "[]"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sorting",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "[]"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated ticket list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminTicketRow"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a ticket manually (admin)",
+        "description": "Creates a ticket without going through the LiqPay payment flow. A synthetic transaction ID and signature are generated.",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "dateOfDeparture",
+                  "origin",
+                  "destination",
+                  "busFlightFrom",
+                  "currency",
+                  "status",
+                  "discount",
+                  "children",
+                  "passengers"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "object",
+                    "description": "Ticket type { id, name }; backend reads name (resolved to a meta key).",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "5"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "В одну сторону"
+                      }
+                    }
+                  },
+                  "dateOfDeparture": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "dateOfReturn": {
+                    "type": "string",
+                    "format": "date",
+                    "nullable": true
+                  },
+                  "origin": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "destination": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "busFlightFrom": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "busFlightTo": {
+                    "type": "object",
+                    "nullable": true
+                  },
+                  "price": {
+                    "type": "integer",
+                    "nullable": true,
+                    "example": 4880,
+                    "description": "Calculated by the form; optional on create."
+                  },
+                  "currency": {
+                    "type": "string",
+                    "example": "UAH"
+                  },
+                  "status": {
+                    "type": "object",
+                    "description": "Ticket status { id, name }; backend reads name (resolved to a meta key).",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "1"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Не оплачено"
+                      }
+                    }
+                  },
+                  "discount": {
+                    "type": "object",
+                    "description": "Ticket discount { percentage, name }; backend reads percentage.",
+                    "properties": {
+                      "percentage": {
+                        "type": "number",
+                        "example": 0
+                      },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    }
+                  },
+                  "passengers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "Adult passenger objects"
+                  },
+                  "children": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "Child passenger objects"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/attributes": {
+      "get": {
+        "summary": "Get ticket status and type lookup values",
+        "description": "Returns the localised label/value pairs for ticket statuses (not-payed, payed, etc.) and types (one-way, open-date, round).",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "type": "string",
+              "default": "uk_UA"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attribute lookup values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "confirmations": {
+                          "type": "array",
+                          "description": "Confirmation statuses, incl. a synthetic \"0\" (no confirmation).",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "example": "8"
+                              },
+                              "label": {
+                                "type": "string",
+                                "example": "Підтвердження"
+                              },
+                              "value": {
+                                "type": "string",
+                                "example": "Підтвердження"
+                              }
+                            }
+                          }
+                        },
+                        "statuses": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "value": {
+                                "type": "string"
+                              },
+                              "color": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "types": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "value": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/download-pdf": {
+      "get": {
+        "summary": "Download a ticket PDF (admin)",
+        "description": "When `passengerId` is given, returns that passenger's individual PDF. When omitted, falls back to the legacy combined ticket PDF.\n",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Ticket ID"
+          },
+          {
+            "in": "query",
+            "name": "passengerId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional — download only this passenger's PDF"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF file",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or PDF not found"
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/passengers": {
+      "post": {
+        "summary": "Add a passenger to an existing ticket",
+        "description": "Attaches an existing passenger (by `id`) or creates a new one (via `data`) and links them to the specified ticket. Also decrements `freeSeats` on the associated bus flight.\n",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ticketId",
+                  "type"
+                ],
+                "properties": {
+                  "ticketId": {
+                    "type": "string",
+                    "description": "Ticket ID to add the passenger to"
+                  },
+                  "id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Existing passenger ID (omit to create a new one)"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "adult",
+                      "child"
+                    ]
+                  },
+                  "data": {
+                    "type": "object",
+                    "nullable": true,
+                    "description": "New passenger data (used when `id` is omitted)",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "lastName": {
+                        "type": "string"
+                      },
+                      "phone": {
+                        "type": "string"
+                      },
+                      "dateOfBirth": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": "string"
+                      },
+                      "passengerDiscount": {
+                        "type": "object"
+                      },
+                      "discountCardNumber": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Passenger added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Passenger already on ticket"
+          },
+          "404": {
+            "description": "Ticket or passenger not found"
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/send-pdf": {
+      "post": {
+        "summary": "Email ticket PDF to a recipient",
+        "description": "Sends the ticket PDF(s) to the given email address. When `passengerId` is provided, only that passenger's PDF is attached; otherwise all passenger PDFs are attached.\n",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "email"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Ticket ID"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "passengerId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Optional — send only this passenger's PDF"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or PDF not found"
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/generate-pdf": {
+      "post": {
+        "summary": "(Re)generate per-passenger PDFs for a ticket",
+        "description": "Generates one PDF per passenger (adult + child). When `passengerId` is provided, only that passenger's PDF is (re)generated; otherwise every passenger on the ticket is regenerated. Old PDFs are replaced and the new filenames are written back to `passengertickets.PDFFileName`.\n",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Ticket ID"
+                  },
+                  "passengerId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Optional — (re)generate only this passenger's PDF"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PDFs generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No passengers on ticket"
+          },
+          "404": {
+            "description": "Ticket not found"
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/delete-pdf": {
+      "post": {
+        "summary": "Delete generated PDF(s) for a ticket",
+        "description": "Deletes generated PDF file(s) and clears the corresponding DB pointers. When `passengerId` is provided, that passenger's per-passenger PDF is deleted; if it has none, the legacy ticket-level PDF (its fallback) is deleted instead. Without `passengerId`, every per-passenger PDF plus the ticket-level PDF are removed. Idempotent: anything already absent is skipped.\n",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Ticket ID"
+                  },
+                  "passengerId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Optional — delete only this passenger's PDF"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PDF(s) deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        },
+                        "deleted": {
+                          "type": "integer",
+                          "description": "Number of PDF files removed"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or passenger not found"
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/{id}": {
+      "put": {
+        "summary": "Update a ticket",
+        "description": "Updates ticket metadata (dates, flight, price, status, discount) and the passenger's fields when `passengerId` is supplied. Because edited fields appear on the generated tickets, any existing PDFs (ticket-level and per-passenger) are invalidated, so they must be regenerated afterwards.\n",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "dateOfDeparture",
+                  "origin",
+                  "destination",
+                  "busFlightFrom",
+                  "currency",
+                  "status",
+                  "discount"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "object",
+                    "description": "Ticket type { id, name }; backend reads id (the ticket_type meta id).",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "5"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "В одну сторону"
+                      }
+                    }
+                  },
+                  "dateOfDeparture": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "dateOfReturn": {
+                    "type": "string",
+                    "format": "date",
+                    "nullable": true
+                  },
+                  "origin": {
+                    "type": "object"
+                  },
+                  "destination": {
+                    "type": "object"
+                  },
+                  "busFlightFrom": {
+                    "type": "object"
+                  },
+                  "busFlightTo": {
+                    "type": "object",
+                    "nullable": true
+                  },
+                  "price": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Ignored; recalculated as the sum of per-passenger prices."
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "object",
+                    "description": "Ticket status { id, name }; backend reads id (the ticket_status meta id).",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "1"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Не оплачено"
+                      }
+                    }
+                  },
+                  "discount": {
+                    "type": "object",
+                    "description": "Ticket discount { percentage, name }; backend reads percentage.",
+                    "properties": {
+                      "percentage": {
+                        "type": "number",
+                        "example": 10
+                      },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    }
+                  },
+                  "passengerId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Original passenger id of the row; used to locate the junction row to update."
+                  },
+                  "newPassengerId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Selected existing passenger to re-link this row to. When present and different from passengerId, the junction row is re-pointed to this passenger and the target passenger's identity is left untouched. Omit (or equal to passengerId) for a plain edit."
+                  },
+                  "passengerDiscount": {
+                    "type": "object",
+                    "nullable": true
+                  },
+                  "passengerConfirmation": {
+                    "type": "object",
+                    "nullable": true,
+                    "description": "Confirmation status; id matches a confirmation_type meta, or \"0\" for none.",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "8"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Підтвердження"
+                      }
+                    }
+                  },
+                  "agent": {
+                    "type": "object",
+                    "nullable": true,
+                    "description": "Assigned agent; id matches an agent, or \"0\" for none.",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "0"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Без агента"
+                      }
+                    }
+                  },
+                  "discountCardNumber": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "paymentAtOfficeUAH": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Amount paid at office, in UAH — the stored truth. The booking-currency paymentAtOffice is derived from it (round(UAH / rate)). Preferred over paymentAtOffice."
+                  },
+                  "paymentOnBusUAH": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Amount paid on bus, in UAH — the stored truth. The booking-currency paymentOnBus is derived from it. Preferred over paymentOnBus."
+                  },
+                  "paymentAtOffice": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Legacy: amount in the ticket's booking currency; used (lifted to UAH × rate) only when paymentAtOfficeUAH is absent."
+                  },
+                  "paymentOnBus": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Legacy: amount in the ticket's booking currency; used (lifted to UAH × rate) only when paymentOnBusUAH is absent."
+                  },
+                  "busSeat": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "additionalPhone": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "email": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "dateOfBirth": {
+                    "type": "string",
+                    "format": "date",
+                    "nullable": true
+                  },
+                  "passengerType": {
+                    "type": "object",
+                    "description": "Passenger type { id, name }; backend reads id (adult|child).",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "adult"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "adult"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a ticket",
+        "description": "Deletes the ticket and its PDF files, and restores `freeSeats` on associated flights.",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found"
+          }
+        }
+      }
+    },
+    "/api/admin/tickets/passengers/{id}": {
+      "delete": {
+        "summary": "Remove a passenger from a ticket",
+        "description": "Unlinks the passenger from the ticket, deletes that passenger's PDF, and restores one free seat. For `type=child`, also deletes the child passenger row. If the passenger is the last one on the ticket, the whole ticket is deleted instead (all junction rows, child passengers, and ticket-level + per-passenger PDF files), restoring all its seats.\n",
+        "tags": [
+          "Admin / Tickets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Ticket ID"
+          },
+          {
+            "in": "query",
+            "name": "passengerId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Passenger ID to remove"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "adult",
+                "child"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Passenger removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ticketId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Passenger not on this ticket"
+          },
+          "404": {
+            "description": "Ticket or passenger not found"
+          }
+        }
+      }
+    },
+    "/api/admin/search/agents": {
+      "get": {
+        "summary": "Autocomplete search for agents",
+        "description": "Returns up to 8 agents whose name contains the search string.",
+        "tags": [
+          "Admin / Search"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "s",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "Norml"
+            },
+            "description": "Search string (substring match on agent name)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "agentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string",
+                            "description": "ID - Name"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/search/bus-flights": {
+      "get": {
+        "summary": "Autocomplete search for bus flights by date (and optionally city pair)",
+        "description": "Returns bus flights whose `dateOfDeparture` matches the date extracted from the search string. When `originId` and `destinationId` are both supplied, the result is further restricted to flights whose route actually connects that city pair in the requested `direction` (the origin must be an onboarding stop and the destination an outboarding stop), so an admin only sees flights that can serve the selected route. Without the city params it behaves as before (date-only, capped at 4 results).\n",
+        "tags": [
+          "Admin / Search"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "s",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "19.06.2026"
+            },
+            "description": "Search string containing a date (various formats accepted)"
+          },
+          {
+            "in": "query",
+            "name": "originId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Origin city ID. When set together with destinationId, flights are filtered to this city pair."
+          },
+          {
+            "in": "query",
+            "name": "destinationId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Destination city ID. When set together with originId, flights are filtered to this city pair."
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "forwards",
+                "backwards"
+              ],
+              "default": "forwards"
+            },
+            "description": "Travel direction relative to the city pair. `forwards` = origin → destination (departure flight); `backwards` = destination → origin (return flight).\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bus-flight suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "busFlightId": {
+                            "type": "string"
+                          },
+                          "routeId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Київ — Штутгарт"
+                          },
+                          "dateOfDeparture": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "freeSeats": {
+                            "type": "integer"
+                          },
+                          "discount": {
+                            "type": "integer"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/search/passengers": {
+      "get": {
+        "summary": "Autocomplete search for passengers by phone number",
+        "description": "Returns up to 8 passengers whose phone contains the numeric portion of the search string.",
+        "tags": [
+          "Admin / Search"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "s",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "+380671234567"
+            },
+            "description": "Search string (digits extracted and matched against phone last 7 digits)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Passenger suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "passengerId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "phone": {
+                            "type": "string"
+                          },
+                          "dateOfBirth": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string",
+                            "description": "ID - LastName Name (phone)"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/search/tickets": {
+      "get": {
+        "summary": "Autocomplete search for tickets by ID, ticket number or departure date",
+        "description": "Returns up to 8 matching tickets. Excludes ticket IDs passed in `ticketsIds`.",
+        "tags": [
+          "Admin / Search"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "s",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search string (ticket/passenger ID, date, or ticket number)"
+          },
+          {
+            "in": "query",
+            "name": "ticketsIds",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "[]"
+            },
+            "description": "JSON array of ticket IDs to exclude from results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ticketId": {
+                            "type": "string"
+                          },
+                          "origin": {
+                            "type": "object"
+                          },
+                          "destination": {
+                            "type": "object"
+                          },
+                          "busFlightFrom": {
+                            "type": "object"
+                          },
+                          "price": {
+                            "type": "number"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/discounts": {
+      "get": {
+        "summary": "List all discounts",
+        "description": "Returns all discount types (student, pensioner, child, etc.) plus a synthetic \"No discount\" entry with `id: \"0\"`. Used to populate discount dropdowns in the admin ticket form.\n",
+        "tags": [
+          "Admin / Discounts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "5"
+                          },
+                          "coef": {
+                            "type": "number",
+                            "example": 0.9
+                          },
+                          "group": {
+                            "type": "string",
+                            "example": "students"
+                          },
+                          "label": {
+                            "type": "string",
+                            "example": "Студентська"
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/admin/cities": {
+      "get": {
+        "summary": "List all cities with their route assignments",
+        "description": "Returns cities enriched with the routes they appear on (as onboarding or outboarding stop) and their sort order within each route.",
+        "tags": [
+          "Admin / Cities"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "City list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "1"
+                          },
+                          "label": {
+                            "type": "string",
+                            "example": "Київ"
+                          },
+                          "value": {
+                            "type": "string",
+                            "example": "Київ"
+                          },
+                          "groupBy": {
+                            "type": "string",
+                            "example": "Україна"
+                          },
+                          "countryId": {
+                            "type": "string",
+                            "example": "2"
+                          },
+                          "sorting": {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            },
+                            "description": "Per-route sort-index map"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/admin/bus-flights": {
+      "get": {
+        "summary": "List bus flights (paginated, filterable, sortable)",
+        "tags": [
+          "Admin / Bus Flights"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 0
+            },
+            "description": "Row offset (pagination)"
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 10
+            },
+            "description": "Page size"
+          },
+          {
+            "in": "query",
+            "name": "filters",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "[]"
+            },
+            "description": "JSON-serialised filter array `[{id, value}]`"
+          },
+          {
+            "in": "query",
+            "name": "filtersFns",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "[]"
+            },
+            "description": "JSON-serialised filter-function map {fieldId: fnName}"
+          },
+          {
+            "in": "query",
+            "name": "sorting",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "[]"
+            },
+            "description": "JSON-serialised sort array `[{id, desc}]`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated bus-flight list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BusFlightTableRow"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new bus flight",
+        "tags": [
+          "Admin / Bus Flights"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "allSeats",
+                  "freeSeats",
+                  "routeId",
+                  "dateOfDeparture",
+                  "discount"
+                ],
+                "properties": {
+                  "allSeats": {
+                    "type": "integer",
+                    "example": 50
+                  },
+                  "freeSeats": {
+                    "type": "integer",
+                    "example": 50
+                  },
+                  "routeId": {
+                    "type": "integer",
+                    "example": 3
+                  },
+                  "dateOfDeparture": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-07-10"
+                  },
+                  "discount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "example": 0,
+                    "description": "Discount percentage (0 = no discount)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created bus-flight record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/admin/bus-flights/available-dates": {
+      "get": {
+        "summary": "Available departure dates for a city pair (admin ticket form)",
+        "description": "Returns the dates that have at least one flight with free seats for the given origin/destination and direction. Mirrors the public `/api/bus-flights/available-dates` contract; used to pre-populate the departure (\"Пункт відправлення\") and return (\"Пункт повернення\") date pickers in the admin ticket form (call once per column with the matching direction).\n",
+        "tags": [
+          "Admin / Bus Flights"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "originId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "destinationId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Only return dates on or after this date (defaults to today)"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "forwards",
+                "backwards"
+              ],
+              "default": "forwards"
+            },
+            "description": "`forwards` = origin→destination (departure), `backwards` = return leg"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of available dates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "example": [
+                        "2026-06-19",
+                        "2026-06-26"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/admin/bus-flights/{id}": {
+      "get": {
+        "summary": "Get a single bus flight by ID",
+        "tags": [
+          "Admin / Bus Flights"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bus-flight detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BusFlightDetail"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a bus flight",
+        "tags": [
+          "Admin / Bus Flights"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "allSeats",
+                  "freeSeats",
+                  "routeId",
+                  "dateOfDeparture",
+                  "discount"
+                ],
+                "properties": {
+                  "allSeats": {
+                    "type": "integer"
+                  },
+                  "freeSeats": {
+                    "type": "integer"
+                  },
+                  "routeId": {
+                    "type": "integer"
+                  },
+                  "dateOfDeparture": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "discount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated bus-flight record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a bus flight",
+        "description": "Also deletes the associated discount row (if any).",
+        "tags": [
+          "Admin / Bus Flights"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted bus-flight record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/admin/auth/register": {
+      "post": {
+        "summary": "Register a new admin account",
+        "description": "Creates a new admin user. The account must be activated via the email link before login is possible.",
+        "tags": [
+          "Admin / Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 30
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 32
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "New user record (without tokens — account not yet activated)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/auth/login": {
+      "post": {
+        "summary": "Admin login",
+        "description": "Authenticates an admin user. Returns a short-lived `accessToken` in the response body and sets a `refreshToken` HTTP-only cookie.\n",
+        "tags": [
+          "Admin / Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 32
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string",
+                  "example": "refreshToken=xxx; HttpOnly; Secure"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string",
+                          "description": "JWT access token — pass as Authorization: Bearer <token>"
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        },
+                        "user": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or wrong credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/auth/logout": {
+      "get": {
+        "summary": "Admin logout",
+        "description": "Invalidates the refresh token and clears the `refreshToken` cookie.",
+        "tags": [
+          "Admin / Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/auth/activate/{link}": {
+      "get": {
+        "summary": "Activate admin account via email link",
+        "description": "Activates the account and redirects to the admin login page.",
+        "tags": [
+          "Admin / Auth"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Activation UUID from the registration email"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirects to admin login URL"
+          },
+          "404": {
+            "description": "Invalid or expired activation link"
+          }
+        }
+      }
+    },
+    "/api/admin/auth/refresh": {
+      "get": {
+        "summary": "Refresh admin access token",
+        "description": "Issues a new `accessToken` using the `refreshToken` HTTP-only cookie. Also rotates the refresh token.\n",
+        "tags": [
+          "Admin / Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "New tokens issued",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        },
+                        "user": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing refresh token"
+          }
+        }
+      }
+    },
+    "/api/admin/agents": {
+      "get": {
+        "summary": "List all agents",
+        "description": "Returns all agents plus a synthetic \"No agent\" entry with `id: \"0\"`. Used to populate agent dropdowns in the admin ticket form.\n",
+        "tags": [
+          "Admin / Agents"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/OkStatus"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "1"
+                          },
+                          "label": {
+                            "type": "string",
+                            "example": "Нестерова"
+                          },
+                          "value": {
+                            "type": "string",
+                            "example": "Нестерова"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Нестерова"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "totalRowCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    }
+  }
+}

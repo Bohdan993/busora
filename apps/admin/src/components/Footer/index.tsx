@@ -18,7 +18,7 @@ function Footer() {
       >
         <Box>
           <Typography variant="subtitle1">
-            &copy; {new Date().getFullYear()} - Benz Express
+            &copy; {new Date().getFullYear()} - Busora (навчальний демо-проєкт)
           </Typography>
         </Box>
         {/* <Typography

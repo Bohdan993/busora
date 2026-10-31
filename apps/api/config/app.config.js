@@ -37,6 +37,11 @@ const rateLimitConfig = {
   legacyHeaders: false // Disable `X-RateLimit-*` headers
 };
 
+// Cookies are HTTPS-only unless explicitly disabled for the plain-HTTP local
+// stack: browsers drop a secure cookie sent over HTTP. Behind the HTTPS proxy,
+// "trust proxy" makes requests count as secure.
+const isCookieSecure = process.env.SESSION_COOKIE_SECURE !== 'false';
+
 /**
  * Session configuration
  * @param {Object} redisStore - Optional Redis store instance
@@ -44,21 +49,33 @@ const rateLimitConfig = {
  */
 function getSessionConfig(redisStore = null) {
   return {
-    name: 'busreisen-sess',
+    name: 'busora-sess',
     store: redisStore || undefined, // Use Redis if available, otherwise memory store
     secret: process.env.SESSION_SECRET,
     saveUninitialized: false,
     resave: false, // Don't save session if unmodified
     rolling: false, // Don't refresh expiration on every request
     cookie: {
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
-      // secure: process.env.NODE_ENV === "production", // HTTPS only in production
-      secure: true,
+      // The web app reaches the API through a same-origin proxy; "lax" also
+      // keeps the cookie on top-level redirects back from a payment page.
+      sameSite: 'lax',
+      // express-session never sets a secure cookie over HTTP
+      secure: isCookieSecure,
       maxAge: constants.SESSION_TIME,
       httpOnly: true // Prevent XSS attacks
     }
   };
 }
+
+/**
+ * Cookie carrying the admin panel's refresh token
+ */
+const refreshTokenCookieConfig = {
+  maxAge: constants.REFRESH_TOKEN_TIME,
+  httpOnly: true,
+  secure: isCookieSecure,
+  sameSite: 'lax'
+};
 
 /**
  * Redis client configuration
@@ -133,15 +150,6 @@ const compressionConfig = {
 };
 
 /**
- * View engine configuration
- */
-const viewConfig = {
-  viewsPath: 'views',
-  engine: 'pug',
-  cache: process.env.NODE_ENV === 'production'
-};
-
-/**
  * Server configuration
  */
 const serverConfig = {
@@ -154,10 +162,10 @@ module.exports = {
   corsConfig,
   rateLimitConfig,
   getSessionConfig,
+  refreshTokenCookieConfig,
   redisConfig,
   helmetConfig,
   bodyParserConfig,
   compressionConfig,
-  viewConfig,
   serverConfig
 };

@@ -4,12 +4,14 @@
 const nodemailer = require('nodemailer');
 const { loadLanguageFile } = require('@helpers');
 const constants = require('@helpers/constants.js');
+const { DEFAULT_LOCALE } = require('@root/config/market');
 
 function createMailer() {
   const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST,
-    port: process.env.MAIL_PORT, //587
-    secure: process.env.MAIL_SECURE, //false
+    port: Number(process.env.MAIL_PORT), //587
+    // Env values are strings: "false" would be truthy and force TLS
+    secure: process.env.MAIL_SECURE === 'true',
     auth: {
       user: process.env.MAIL_USER,
       pass: process.env.MAIL_PASS
@@ -74,6 +76,7 @@ function createPassengerTicketLetter({
                     </head>
                     <body>
                         ${translations?.text ? translations.text(count) : ''}
+                        <p style="color: #777676; font-size: 12px;">${translations?.demoNoticeText ?? ''}</p>
                     </body>
                 </html>`;
 
@@ -92,6 +95,9 @@ async function sendFileMail({
   sendAdminEmail = true
 }) {
   const translations = loadLanguageFile('_mail.js', languageCode);
+  // The admin team reads its copy in the default locale, whatever the
+  // customer's language
+  const adminTranslations = loadLanguageFile('_mail.js', DEFAULT_LOCALE);
   let adminText = null;
   const passengerText = createPassengerTicketLetter({
     subject,
@@ -123,7 +129,7 @@ async function sendFileMail({
       subject,
       passangersData,
       email,
-      translations,
+      translations: adminTranslations,
       transactionId,
       orderId
     });
@@ -135,7 +141,8 @@ async function sendFileMail({
       to: emailAdresses[i],
       subject:
         emailAdresses[i] === process.env.ADMIN_EMAIL
-          ? subject + ` | (${translations?.transactionIdText}:${transactionId})`
+          ? subject +
+            ` | (${adminTranslations?.transactionIdText}:${transactionId})`
           : subject,
       attachments
     };
@@ -155,7 +162,6 @@ async function sendFileMail({
             return rej(err);
           } else {
             console.log('Email sent: ' + info.response);
-            console.log('Send to Email: ' + emailAdresses[i]);
             return res('Success');
           }
         });

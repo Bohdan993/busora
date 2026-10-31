@@ -10,56 +10,45 @@ const {
 } = require('@database/models/index');
 // const { transformTimestampToDate } = require("@helpers");
 const { checkCallbackSignature } = require('@middlewares/paymentMiddlewares');
-const { generateHTMLTicket, createTicket } = require('@services/ticketService');
+const { createTicket } = require('@services/ticketService');
 const {
-  buildTicketQuery,
-  buildHTMLTicketOptions,
+  loadTicketWithRelations,
   generatePerPassengerPDFs,
   persistPerPassengerPDFs
 } = require('@services/admin/ticketPdfService');
 const { getSessionData } = require('@services/sessionService');
+const { buildTicketSummary } = require('@services/ticketSummaryService');
 const constants = require('@helpers/constants.js');
 const APIError = require('@exeptions/api-error');
+const logger = require('@services/loggerService');
+const { decodePayload } = require('@services/payments/signedPayload');
 const router = Router();
 
 /**
  * @swagger
  * /api/tickets:
  *   post:
- *     summary: Create ticket after successful LiqPay payment
+ *     summary: Create the ticket after a LiqPay widget payment
  *     description: >
- *       Called by the frontend after LiqPay confirms payment. Verifies the HMAC
- *       signature, looks up session data, creates the ticket record and generates
- *       per-passenger PDFs. Idempotent — duplicate calls return the existing ticket.
+ *       Called by the browser after the LiqPay widget reports success, racing
+ *       the server callback. Creates the ticket and its per-passenger PDFs if
+ *       the callback has not yet; idempotent per transaction.
  *     tags: [Tickets]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [data, signature]
- *             properties:
- *               data:
- *                 type: string
- *                 description: Base64-encoded LiqPay callback data
- *               signature:
- *                 type: string
- *                 description: HMAC-SHA1 signature from LiqPay
+ *             $ref: '#/components/schemas/SignedPayload'
  *     responses:
  *       200:
- *         description: Ticket created (or already existed)
+ *         description: Ticket created or already existed
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 sessionExpiresTime:
- *                   type: integer
- *       403:
- *         description: Invalid signature
+ *               $ref: '#/components/schemas/SessionOkResponse'
+ *       400:
+ *         description: BAD_REQUEST — invalid signature or unsuccessful payment
  *         content:
  *           application/json:
  *             schema:
@@ -151,8 +140,7 @@ router.post('/', [checkCallbackSignature], async (req, res, next) => {
 
     if (!existingPassengerPdf && !ticket.PDFFileName) {
       // Reload with all relations needed by the PDF builder
-      const query = buildTicketQuery(ticket.id);
-      const ticketWithRelations = await Ticket.findOne(query);
+      const ticketWithRelations = await loadTicketWithRelations(ticket.id);
       const results = await generatePerPassengerPDFs(ticketWithRelations);
       await persistPerPassengerPDFs(ticketWithRelations, results);
     }
@@ -171,99 +159,65 @@ router.post('/', [checkCallbackSignature], async (req, res, next) => {
 
 /**
  * @swagger
- * /api/tickets/generate:
+ * /api/tickets/summary:
  *   post:
- *     summary: Generate ticket confirmation HTML page
+ *     summary: Summary of a paid booking for the success page
  *     description: >
- *       Renders the full-ticket HTML page for display after payment. Destroys the
- *       booking session on success. Requires a valid HMAC signature.
+ *       Takes the signed payment result returned by the payment step and answers
+ *       with the ticket in plain JSON. Ends the booking session.
  *     tags: [Tickets]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [data]
- *             properties:
- *               data:
- *                 type: string
- *                 description: Base64-encoded LiqPay callback data containing `transaction_id`
+ *             $ref: '#/components/schemas/SignedPayload'
  *     responses:
  *       200:
- *         description: HTML page (text/html)
+ *         description: Ticket summary
  *         content:
- *           text/html:
+ *           application/json:
  *             schema:
- *               type: string
- *       403:
+ *               type: object
+ *               required: [status, data]
+ *               properties:
+ *                 status:
+ *                   $ref: '#/components/schemas/OkStatus'
+ *                 data:
+ *                   $ref: '#/components/schemas/TicketSummary'
+ *       400:
  *         description: Invalid signature
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Ticket not found
+ *         description: No ticket for this payment (yet)
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/generate', [checkCallbackSignature], async (req, res, next) => {
+router.post('/summary', [checkCallbackSignature], async (req, res, next) => {
   try {
-    const { data } = req?.body ?? {};
-    const decodedData = Buffer.from(data, 'base64').toString('utf-8');
-    const parsedData = JSON.parse(decodedData);
-    // const { sessionInfoData } = await getSessionData(parsedData);
-    // const { amount: price, info } = parsedData;
-    // const { originalCurrency, languageCode } = JSON.parse(info);
-    // const { passengersInfo, selectedBusFlight } = sessionInfoData;
-    // const passengersInfoData = Object.entries(passengersInfo);
+    const { transaction_id: transactionId } = decodePayload(req.body.data);
+
     const ticket = await Ticket.findOne({
-      attributes: [
-        'id'
-        // "dateOfDeparture",
-        // "dateOfReturn",
-        // "dateOfCreature",
-        // "busFlightFromId",
-        // "busFlightToId",
-        // "price",
-        // "currencyAbbr",
-        // "typeId",
-        // "statusId",
-        // "signature",
-        // "dateOfFirstUsage",
-        // "hasDiscount",
-        // "discountPercentage",
-        // "originId",
-        // "destinationId",
-        // "children",
-        // "PDFFileName",
-        // "prevPDFFileName",
-        // "createdAt",
-        // "updatedAt",
-        // "ticketNumber",
-        // "transactionId",
-      ],
-      where: {
-        transactionId: parsedData?.transaction_id
-      }
+      attributes: ['id'],
+      where: { transactionId }
     });
 
     if (!ticket) {
       throw APIError.NotFoundError('ticket not found');
     }
 
-    // Reload ticket with all necessary relations for HTML generation
-    const query = buildTicketQuery(ticket.id);
-    const ticketWithRelations = await Ticket.findOne(query);
-
-    const htmlTicketOptions = await buildHTMLTicketOptions(
-      ticketWithRelations,
-      1,
-      'ticket.pug'
+    const summary = buildTicketSummary(
+      await loadTicketWithRelations(ticket.id)
     );
-    const html = await generateHTMLTicket(htmlTicketOptions);
 
     return req.session.destroy(function (err) {
       if (err) return next(err);
-      return res.send(html);
+      return res.json({ status: 'ok', data: summary });
     });
   } catch (err) {
     return next(err);
@@ -274,22 +228,15 @@ router.post('/generate', [checkCallbackSignature], async (req, res, next) => {
  * @swagger
  * /api/tickets/download-pdf:
  *   post:
- *     summary: Download ticket PDF(s)
- *     description: >
- *       Returns a single PDF or a ZIP archive containing one PDF per passenger.
- *       Requires a valid HMAC signature in the request body.
+ *     summary: Download the ticket PDFs
+ *     description: One PDF for a single passenger, otherwise a ZIP with one PDF per passenger.
  *     tags: [Tickets]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [data]
- *             properties:
- *               data:
- *                 type: string
- *                 description: Base64-encoded data containing `transaction_id`
+ *             $ref: '#/components/schemas/SignedPayload'
  *     responses:
  *       200:
  *         description: PDF file or ZIP archive
@@ -298,10 +245,14 @@ router.post('/generate', [checkCallbackSignature], async (req, res, next) => {
  *             schema: { type: string, format: binary }
  *           application/zip:
  *             schema: { type: string, format: binary }
- *       403:
- *         description: Invalid signature
+ *       400:
+ *         description: BAD_REQUEST — invalid signature
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Ticket not found
+ *         description: NOT_FOUND — no ticket for this payment
  *         content:
  *           application/json:
  *             schema:
@@ -339,7 +290,7 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
           ? pdfFileNames[0] + '.pdf'
           : ticket?.PDFFileName + '.pdf';
       const singlePath = path.resolve('assets', 'tickets', singleName);
-      return res.download(singlePath, 'Benz_Express_Ticket.pdf', (err) => {
+      return res.download(singlePath, 'Busora_Ticket.pdf', (err) => {
         if (err) return next(err);
       });
     }
@@ -348,7 +299,7 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename="Benz_Express_Tickets.zip"'
+      'attachment; filename="Busora_Tickets.zip"'
     );
 
     const archive = archiver('zip', { zlib: { level: 6 } });
@@ -358,7 +309,7 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
 
     pdfFileNames.forEach((name, i) => {
       const filePath = path.resolve('assets', 'tickets', name + '.pdf');
-      archive.file(filePath, { name: `Benz_Express_Ticket_${i + 1}.pdf` });
+      archive.file(filePath, { name: `Busora_Ticket_${i + 1}.pdf` });
     });
 
     await archive.finalize();
@@ -371,8 +322,8 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
  * @swagger
  * /api/tickets/payment-fail:
  *   post:
- *     summary: Handle failed payment notification
- *     description: Destroys the booking session when LiqPay reports a payment failure.
+ *     summary: Report a failed LiqPay widget payment
+ *     description: Logs the failure and ends the booking session.
  *     tags: [Tickets]
  *     requestBody:
  *       required: true
@@ -380,39 +331,41 @@ router.post('/download-pdf', checkCallbackSignature, async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [data]
  *             properties:
  *               data:
- *                 type: object
- *                 properties:
- *                   data:
- *                     type: string
- *                     description: Base64-encoded callback payload
+ *                 $ref: '#/components/schemas/SignedPayload'
  *               errMsg:
- *                 type: string
- *               error:
  *                 type: string
  *     responses:
  *       200:
- *         description: Session destroyed
+ *         description: Session ended
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: BAD_REQUEST — invalid signature
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(
   '/payment-fail',
   [checkCallbackSignature],
   async (req, res, next) => {
     try {
-      const { data, errMsg, error } = req?.body ?? {};
+      const { data, errMsg } = req?.body ?? {};
 
-      const decodedData = Buffer.from(data?.data, 'base64').toString('utf-8');
-
-      console.log('Fail. Passangers data: ', JSON.parse(decodedData));
-      console.log('Fail. Payment data: ', data);
-      console.log('Error msg:', errMsg);
-      console.log('ERROR:', error);
-      console.log('(Date: ' + new Date().toUTCString() + ')');
+      // Identifiers only: the payload also holds the payer's name and phone
+      const payment = decodePayload(data.data);
+      logger.logPayment('payment failed (reported by client)', {
+        orderId: payment?.order_id,
+        transactionId: payment?.transaction_id,
+        status: payment?.status,
+        errMsg
+      });
 
       return req.session.destroy(function (err) {
         if (err) return next(err);

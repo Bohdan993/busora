@@ -3,7 +3,52 @@
 const { Op } = require('sequelize');
 const APIError = require('@exeptions/api-error');
 const { session: Session } = require('@database/models/index');
-const { strToSign } = require('@services/paymentService');
+const { getPaymentProvider } = require('@services/payments');
+const { encodeHTMLEntities } = require('@helpers');
+
+const toBase64 = (str) => Buffer.from(str).toString('base64');
+
+// The only session keys a client may write: UI state it reads back later.
+// Everything else (prices, exchange rate, passengers, flights) is set by the
+// server — letting a client overwrite currencyExchangeRate let it lower the
+// amount it was charged.
+const CLIENT_WRITABLE_SESSION_KEYS = new Set(['bookingPageParams']);
+
+/**
+ * Applies a client's session update. Rejects the whole update (400) if it
+ * contains any key outside CLIENT_WRITABLE_SESSION_KEYS or a non-string value.
+ */
+function applyClientSessionUpdate(session, body = {}) {
+  const entries = Object.entries(body);
+  const invalid = entries.find(
+    ([key, value]) =>
+      !CLIENT_WRITABLE_SESSION_KEYS.has(key) || typeof value !== 'string'
+  );
+  if (invalid) {
+    throw APIError.BadRequestError(
+      `Only these string fields can be stored: ${[...CLIENT_WRITABLE_SESSION_KEYS].join(', ')}`
+    );
+  }
+  for (const [key, value] of entries) {
+    session[key] = encodeHTMLEntities(value);
+  }
+}
+
+/**
+ * Derives a booking's payment keys from its `info` string (JSON with the
+ * booking `date`): the order id sent to the payment provider, and the
+ * signature that keys the saved booking session. Both are signed by the
+ * payment provider, so they can't be forged without its secret.
+ */
+function deriveOrderKeys(info) {
+  const { sign } = getPaymentProvider();
+  const orderId = sign(toBase64(info));
+  const { date } = JSON.parse(info);
+  const sessionSignature = sign(
+    toBase64(JSON.stringify({ order_id: orderId, date }))
+  );
+  return { orderId, sessionSignature };
+}
 
 async function getSessionData(parsedData) {
   if (
@@ -19,28 +64,8 @@ async function getSessionData(parsedData) {
     );
   }
 
-  const { info } = parsedData;
-
-  const infoData = Buffer.from(info).toString('base64');
-
-  const order_id = strToSign(
-    process.env.LIQPAY_PRIVATE_KEY + infoData + process.env.LIQPAY_PRIVATE_KEY
-  );
-
-  const { date } = JSON.parse(info);
-  const sessionSignatureObj = {
-    order_id,
-    date
-  };
-
-  const sessionSignatureData = Buffer.from(
-    JSON.stringify(sessionSignatureObj)
-  ).toString('base64');
-
-  const sessionSignature = strToSign(
-    process.env.LIQPAY_PRIVATE_KEY +
-      sessionSignatureData +
-      process.env.LIQPAY_PRIVATE_KEY
+  const { orderId: order_id, sessionSignature } = deriveOrderKeys(
+    parsedData.info
   );
   const session = await Session.findOne({
     where: {
@@ -91,6 +116,8 @@ async function deleteExpiredSessions() {
 }
 
 module.exports = {
+  applyClientSessionUpdate,
+  deriveOrderKeys,
   getSessionData,
   deleteExpiredSessions
 };

@@ -20,18 +20,23 @@ const {
 const {
   sequelize,
   busflight: BusFlight,
+  language: Language,
   passenger: Passenger,
   passengerticket: PassengerTicket,
   ticket: Ticket
 } = require('@database/models/index');
 const constants = require('@helpers/constants.js');
+const { isSupportedLocale } = require('@root/config/market');
+
+// uk_UA — see the reference-data migration
+const DEFAULT_LANGUAGE_ID = 1;
 const {
   convertEnumToMetaId,
   resolveMetaId,
   getMetaNameById,
   getMetaIdByKey
 } = require('@services/ticketMetaService');
-const { getCurrencyExchangeRate } = require('@services/paymentService');
+const { getExchangeRate } = require('@services/exchangeRates');
 
 // Base Chrome flags. Note: NO fixed --user-data-dir here. A shared profile dir
 // is what caused the 2026-07-10 outage: a render that hung on navigation left a
@@ -148,7 +153,7 @@ async function generateHTMLTicket({
   places,
   ticket,
   constants,
-  template = 'ticket.pug',
+  template = 'full-ticket.pug',
   transformTimestampToDate = () => {}
 } = {}) {
   const ticketTemplate = path.resolve('views', template);
@@ -210,7 +215,7 @@ async function generateHTMLTicket({
       }),
       {
         color: {
-          dark: '#1B3B7F',
+          dark: '#005A87',
           light: '#FFFFFF'
         }
       },
@@ -221,9 +226,7 @@ async function generateHTMLTicket({
           qr: url,
           logo:
             'data:image/png;base64,' +
-            base64Encode(
-              path.resolve('assets', 'images', 'logo_benz_express.png')
-            ),
+            base64Encode(path.resolve('assets', 'images', 'logo_busora.png')),
           translations: loadLanguageFile('_ticket.js', languageCode),
           constants,
           transformTimestampToDate,
@@ -264,6 +267,19 @@ async function generateHTMLTicket({
   });
 }
 
+// The booking language travels in the payment `info` JSON (languageCode).
+// Admin-created tickets carry no `info` and get the default language.
+async function resolveBookingLanguageId(info) {
+  const languageCode = info ? JSON.parse(info)?.languageCode : null;
+  if (!isSupportedLocale(languageCode)) return DEFAULT_LANGUAGE_ID;
+
+  const language = await Language.findOne({
+    attributes: ['id'],
+    where: { code: languageCode }
+  });
+  return language?.id ?? DEFAULT_LANGUAGE_ID;
+}
+
 async function createTicket({
   transactionId = null,
   signature,
@@ -281,21 +297,27 @@ async function createTicket({
   type = null,
   exchangeRate: exchangeRateOverride = null
 } = {}) {
-  const { currency: currencyAbbr, amount: price } = JSON.parse(data);
+  const { currency: currencyAbbr, amount: price, info } = JSON.parse(data);
+  const languageId = await resolveBookingLanguageId(info);
 
-  // Lock the UAH exchange rate at booking time (UAH → 1, EUR → live rate). The
+  // Lock the UAH exchange rate at booking time (UAH → 1, CZK → live rate). The
   // ticket is stored in its display currency; priceUAH is the canonical UAH
   // amount used by the backend/admin/reporting. Never let a rate-lookup failure
-  // block ticket creation (this runs after payment) — fall back to 1. The caller
-  // may pass a pre-resolved rate (admin create already fetched it to convert the
-  // UAH inputs) so the same rate drives the stored price and priceUAH.
+  // block ticket creation (this runs after payment) — fall back to 1 and warn,
+  // since priceUAH is then wrong for a non-UAH ticket. The caller may pass a
+  // pre-resolved rate (admin create already fetched it to convert the UAH
+  // inputs) so the same rate drives the stored price and priceUAH.
   let exchangeRate = 1;
   if (exchangeRateOverride != null) {
     exchangeRate = Number(exchangeRateOverride) || 1;
   } else {
     try {
-      exchangeRate = await getCurrencyExchangeRate({ abbr: currencyAbbr });
-    } catch {
+      exchangeRate = await getExchangeRate(currencyAbbr);
+    } catch (err) {
+      logger.warn('Exchange rate unavailable at ticket creation; using 1', {
+        currency: currencyAbbr,
+        error: err.message
+      });
       exchangeRate = 1;
     }
   }
@@ -362,6 +384,7 @@ async function createTicket({
     currencyAbbr: currencyAbbr,
     originId: parseInt(originId),
     destinationId: parseInt(destinationId),
+    languageId,
     signature: signature,
     transactionId: transactionId,
     hasDiscount: selectedBusFlight?.hasDiscount,
@@ -402,7 +425,8 @@ async function createTicket({
     // Every PassengerTicket carries its own price so that tickets.price is the
     // sum of them. When the caller didn't supply explicit per-passenger prices
     // (e.g. the booking flow), distribute the ticket amount across those rows
-    // evenly so the invariant SUM(passenger price) === ticket.price still holds.
+    // in proportion to each passenger's discounted fare (evenly when unknown),
+    // so the invariant SUM(passenger price) === ticket.price still holds.
     const explicitSum = passengerTicketRows.reduce(
       (sum, row) => sum + (Number(row.price) || 0),
       0
@@ -419,11 +443,15 @@ async function createTicket({
       const discountPct = Number(selectedBusFlight?.discountPercentage) || 0;
       const multiplier = 1 - discountPct / 100;
       const remaining = Math.max(0, Math.round(price) - explicitSum);
-      const per = Math.floor(remaining / unpriced.length);
-      let assigned = 0;
+      // Rows are built in passengerList order
+      const shares = splitAmount(
+        remaining,
+        unpriced.map(
+          (row) => passengerList[passengerTicketRows.indexOf(row)]?.priceWeight
+        )
+      );
       unpriced.forEach((row, i) => {
-        row.price = i === unpriced.length - 1 ? remaining - assigned : per;
-        assigned += row.price;
+        row.price = shares[i];
         row.paymentAtOffice =
           multiplier > 0 ? Math.round(row.price / multiplier) : row.price;
         if (row.paymentAtOfficeUAH == null && row.paymentAtOffice != null)
@@ -494,6 +522,41 @@ async function createTicket({
 }
 
 /**
+ * Splits an integer total into integer parts proportional to `weights`, using
+ * largest-remainder rounding so the parts always sum exactly to the total.
+ * If any weight is missing or not positive, the total is split evenly.
+ */
+function splitAmount(total, weights) {
+  const hasWeights = weights.every((weight) => Number(weight) > 0);
+  const effective = weights.map((weight) => (hasWeights ? Number(weight) : 1));
+  const weightSum = effective.reduce((sum, weight) => sum + weight, 0);
+  const exact = effective.map((weight) => (total * weight) / weightSum);
+  const parts = exact.map(Math.floor);
+
+  const remainder = total - parts.reduce((sum, part) => sum + part, 0);
+  exact
+    .map((value, index) => ({ fraction: value - Math.floor(value), index }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+    .slice(0, remainder)
+    .forEach(({ index }) => {
+      parts[index] += 1;
+    });
+  return parts;
+}
+
+/**
+ * Normalizes a submitted date of birth to "YYYY-MM-DD" (passenger.dateOfBirth
+ * is DATEONLY). Accepts an ISO date string or epoch milliseconds (number or
+ * numeric string — the old frontend's format); anything else becomes null.
+ */
+function toDateOnly(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const isEpochMs = typeof raw === 'number' || /^\d+$/.test(String(raw));
+  const date = new Date(isEpochMs ? Number(raw) : raw);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
+/**
  * Converts the legacy flattened `passengersInfo` object (built by the booking
  * flow and stored in the session) into a normalized passenger array. The index
  * is read from each entry's key (e.g. "child-passenger-3" → 3), so a child's
@@ -509,13 +572,7 @@ function passengersInfoToArray(passengersInfo) {
       const type = match[1];
       const n = match[2];
 
-      const dobRaw = val[`date-of-birth-${n}`];
-      const dateOfBirth =
-        type === 'child'
-          ? dobRaw
-            ? new Date(Number(dobRaw)).toISOString().slice(0, 10)
-            : null
-          : (dobRaw ?? null);
+      const dateOfBirth = toDateOnly(val[`date-of-birth-${n}`]);
 
       return {
         type,
@@ -531,6 +588,9 @@ function passengersInfoToArray(passengersInfo) {
           val[`discount-percantage-${n}`] ??
           null,
         discountCardNumber: parseInt(val[`card-discount-${n}`]) || null,
+        // This passenger's discounted fare in the booking currency, computed
+        // at validation. Weights the split of the charged total across rows.
+        priceWeight: Number(val[`discount-ticket-price-${n}`]) || null,
         // Booking flow never collects these admin-only fields.
         agentId: null,
         paymentAtOffice: null,
@@ -1031,6 +1091,7 @@ module.exports = {
   isPFDTicketExists,
   createTicket,
   passengersInfoToArray,
+  splitAmount,
   buildPassengerTicketRows,
   transformTicket,
   updateTicketPDFFile,

@@ -20,6 +20,7 @@ const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('../config/swagger');
 const logger = require('@services/loggerService');
+const { getPaymentProvider } = require('@services/payments');
 const {
   corsConfig,
   rateLimitConfig,
@@ -28,7 +29,6 @@ const {
   helmetConfig,
   bodyParserConfig,
   compressionConfig,
-  viewConfig,
   serverConfig
 } = require('../config/app.config');
 const { responseHelpers } = require('@helpers/responseFormatter');
@@ -37,29 +37,23 @@ const {
   requestLoggingMiddleware,
   attachLoggerContext
 } = require('@middlewares/requestMiddleware');
+const { createRateLimitHandler } = require('@middlewares/rateLimitMiddleware');
 
 const app = express();
 
-const keyCertPath =
-  process.env.NODE_ENV === 'development'
-    ? path.resolve(__dirname, '../../localhost-key.pem')
-    : null;
-
-const certPath =
-  process.env.NODE_ENV === 'development'
-    ? path.resolve(__dirname, '../../localhost.pem')
-    : null;
-const key =
-  process.env.NODE_ENV === 'development'
-    ? fs.readFileSync(keyCertPath, 'utf-8')
-    : null;
-const cert =
-  process.env.NODE_ENV === 'development'
-    ? fs.readFileSync(certPath, 'utf-8')
-    : null;
+// HTTPS is opt-in for local development: set both cert paths to enable it.
+// Without them (e.g. inside Docker, behind a proxy) the API serves plain HTTP.
+const httpsKeyPath = process.env.DEV_HTTPS_KEY_PATH;
+const httpsCertPath = process.env.DEV_HTTPS_CERT_PATH;
 const server =
-  process.env.NODE_ENV === 'development'
-    ? https.createServer({ key: key, cert: cert }, app)
+  process.env.NODE_ENV === 'development' && httpsKeyPath && httpsCertPath
+    ? https.createServer(
+        {
+          key: fs.readFileSync(path.resolve(httpsKeyPath), 'utf-8'),
+          cert: fs.readFileSync(path.resolve(httpsCertPath), 'utf-8')
+        },
+        app
+      )
     : null;
 
 logger.info(server ? 'HTTPS server created' : 'HTTP server created');
@@ -78,13 +72,16 @@ const citiesRoute = require('@api/routes/cities');
 const currenciesRoute = require('@api/routes/currencies');
 const busflightsRoute = require('@api/routes/busFlights');
 const passengersRoute = require('@api/routes/passengers');
-const translationsRoute = require('@api/routes/translations');
 const paymentRoute = require('@api/routes/payment');
 const ticketsRoute = require('@api/routes/tickets');
 const sessionDataRoute = require('@api/routes/sessionData');
+const networkRoute = require('@api/routes/network');
+const discountsRoute = require('@api/routes/discounts');
 // const insertDataRoute = require("@api/routes/insertDatainDB");
 const { handleError } = require('@middlewares/errorMiddlewares');
+const APIError = require('@exeptions/api-error');
 const { preventSQLInjection } = require('@middlewares/validationMiddleware');
+const { validateLanguageCode } = require('@middlewares/languageMiddleware');
 
 const PORT = process.env.PORT || 5000;
 
@@ -111,7 +108,7 @@ if (process.env.REDIS_HOST) {
 
   redisStore = new RedisStore({
     client: redisClient,
-    prefix: 'busreisen:'
+    prefix: 'busora:'
   });
 }
 
@@ -134,9 +131,6 @@ validate.extend(validate.validators.datetime, {
   }
 });
 
-app.set('views', path.resolve('views'));
-app.set('view engine', 'pug');
-app.set('view cache', true);
 app.set('trust proxy', 1);
 app.set('x-powered-by', false);
 
@@ -144,19 +138,9 @@ app.set('x-powered-by', false);
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  handler: (req, res) => {
-    logger.logSecurity('Rate limit exceeded', {
-      ip: req.ip,
-      path: req.path
-    });
-    res.status(429).json({
-      status: 'error',
-      message: 'Too many requests, please try again later.'
-    });
-  }
+  handler: createRateLimitHandler(logger)
 });
 
 // Helmet configuration with custom options
@@ -199,6 +183,9 @@ app.use(compression(compressionConfig));
 // SQL injection prevention (before routes)
 app.use(preventSQLInjection);
 
+// Unknown ?languageCode= values never reach translation-file lookups
+app.use('/api', validateLanguageCode);
+
 // ── Swagger UI ────────────────────────────────────────────────────────────────
 // Served at /api-docs. Override CSP for this path only so swagger-ui assets load.
 app.use('/api-docs', (req, res, next) => {
@@ -212,7 +199,7 @@ app.use(
   '/api-docs',
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: 'Busreisen API Docs'
+    customSiteTitle: 'Busora API Docs'
   })
 );
 
@@ -221,9 +208,10 @@ app.use('/api/currencies', currenciesRoute);
 app.use('/api/bus-flights', busflightsRoute);
 app.use('/api/passengers', passengersRoute);
 app.use('/api/tickets', ticketsRoute);
-app.use('/api/translations', translationsRoute);
 app.use('/api/payment', paymentRoute);
 app.use('/api/current-data', sessionDataRoute);
+app.use('/api/network', networkRoute);
+app.use('/api/discounts', discountsRoute);
 // app.use("/api/insert", insertDataRoute);
 
 app.use('/api/admin/auth', authRoute);
@@ -238,11 +226,20 @@ app.use('/api/admin/tickets', ticketsAdminRoute);
 // app.use("/api/admin/passengers", passengersAdminRoute);
 // app.use("/api/admin/users", authRoute);
 
+// Unknown API paths answer in the same JSON error shape as everything else
+app.use('/api', (req, res, next) =>
+  next(APIError.NotFoundError(`no route ${req.method} ${req.originalUrl}`))
+);
+
 app.use(handleError);
 
 async function start() {
   try {
-    if (process.env.NODE_ENV === 'development') {
+    // Fail fast on missing/invalid payment config instead of on the first payment
+    const paymentProvider = getPaymentProvider();
+    logger.info(`Payment provider: ${paymentProvider.name}`);
+
+    if (server) {
       server.listen(PORT, () => {
         logger.info(`🚀 Development server (HTTPS) running on port ${PORT}`);
         logger.info(`Environment: ${process.env.NODE_ENV}`);
@@ -250,7 +247,7 @@ async function start() {
       });
     } else {
       app.listen(PORT, () => {
-        logger.info(`🚀 Production server (HTTP) running on port ${PORT}`);
+        logger.info(`🚀 Server (HTTP) running on port ${PORT}`);
         logger.info(`Environment: ${process.env.NODE_ENV}`);
         logger.info(`Session store: ${redisStore ? 'Redis' : 'Memory'}`);
       });
@@ -261,6 +258,8 @@ async function start() {
   }
 }
 
+// `app` is exported for in-process HTTP tests; `start` is what index.js runs
 module.exports = {
+  app,
   start
 };
