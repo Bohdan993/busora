@@ -75,6 +75,31 @@ network.
    download; the admin login works; the inbox asks for its password and shows
    the booking email.
 
+### On Oracle Cloud (the current demo server)
+
+The demo runs on its own OCI instance, `busora-demo` (VM.Standard.A1.Flex,
+arm64, Oracle Linux 9), in the `busreisen-vcn` public subnet, next to the
+Busreisen staging server but separate from it. The subnet's security list
+allows TCP 22, 80 and 443; UDP 443 (HTTP/3) is optional. On the instance:
+
+```sh
+sudo dnf -y update && sudo reboot
+sudo firewall-cmd --permanent --add-service=http --add-service=https
+sudo firewall-cmd --permanent --add-port=443/udp && sudo firewall-cmd --reload
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo useradd --create-home deploy && sudo usermod -aG docker deploy
+```
+
+- `demo.env` and `inbox-password` (the Mailpit login, `busora / <password>`)
+  live in `/opt/busora`, readable by `deploy` only. Read a value with
+  `sudo -u deploy grep SEED_ADMIN_PASSWORD /opt/busora/demo.env`.
+- `deploy` logs in only with the GitHub Actions key, which is marked
+  `restrict` in `authorized_keys` (no terminal, no forwarding; commands and
+  `scp` still work). Administrators log in as `opc` with their own key.
+
 ## Day to day
 
 Every command runs in `/opt/busora`; `dc` stands for
