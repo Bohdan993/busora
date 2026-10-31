@@ -2,7 +2,7 @@
 
 'use strict';
 
-// Daily departures on every route for the next SCHEDULE_DAYS days, counted
+// Departures on each route's weekdays for the next SCHEDULE_DAYS days, counted
 // from the day the seeder runs, plus a promotional discount on some of them.
 // Re-run it to move the schedule forward:
 //   npx sequelize-cli db:seed:undo --seed 20261101000002-bus-flights.js

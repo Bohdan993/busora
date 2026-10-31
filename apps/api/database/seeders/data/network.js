@@ -175,12 +175,16 @@ const CITIES = [
 // boarding (onboarding) cities to its drop-off (outboarding) cities; times are
 // departures at boarding stops and arrivals (next day) at drop-off stops.
 // routeKey codes order the cities along each direction for the admin panel.
+// weekdays (0 = Sunday … 6 = Saturday, UTC) are the departure days from the
+// first boarding city. A bus arrives the next day and returns that evening, so
+// each inbound runs one day after its outbound.
 const LINES = [
   {
     routeGroupId: 1,
     outbound: {
       routeId: 1,
       routeKey: 'KP',
+      weekdays: [2, 4, 6],
       names: {
         uk_UA: 'Київ - Прага',
         cs_CZ: 'Kyjev - Praha',
@@ -202,6 +206,7 @@ const LINES = [
     inbound: {
       routeId: 2,
       routeKey: 'PK',
+      weekdays: [3, 5, 0],
       names: {
         uk_UA: 'Прага - Київ',
         cs_CZ: 'Praha - Kyjev',
@@ -226,6 +231,7 @@ const LINES = [
     outbound: {
       routeId: 3,
       routeKey: 'TP',
+      weekdays: [1, 3, 5],
       names: {
         uk_UA: 'Тернопіль - Пльзень',
         cs_CZ: 'Ternopil - Plzeň',
@@ -245,6 +251,7 @@ const LINES = [
     inbound: {
       routeId: 4,
       routeKey: 'PT',
+      weekdays: [2, 4, 6],
       names: {
         uk_UA: 'Пльзень - Тернопіль',
         cs_CZ: 'Plzeň - Ternopil',
@@ -375,8 +382,9 @@ const PROMO_DISCOUNT = {
   coef: 0.15,
   order: 500,
   // 0 = Sunday … 6 = Saturday (UTC): Wednesday departures of line 2
+  // (Ternopil → Pilsen; the return direction does not run on Wednesdays)
   weekday: 3,
-  routeIds: [3, 4],
+  routeIds: [3],
   names: {
     uk_UA: 'Знижка на рейс - 15 %.',
     cs_CZ: 'Sleva na spoj - 15 %.',

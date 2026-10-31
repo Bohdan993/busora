@@ -113,26 +113,25 @@ function priceRows() {
 // "YYYY-MM-DD" in UTC — busflights.dateOfDeparture is a DATEONLY column.
 const toDateOnly = (date) => date.toISOString().slice(0, 10);
 
-/** Daily departures on every route, starting at `startDate` (a Date). */
+/** Departures on each route's weekdays, starting at `startDate` (a Date). */
 function flightRows(startDate, days = SCHEDULE_DAYS) {
   const start = Date.UTC(
     startDate.getUTCFullYear(),
     startDate.getUTCMonth(),
     startDate.getUTCDate()
   );
-  const routeIds = LINES.flatMap((line) =>
-    directions(line).map((d) => d.routeId)
-  );
-  return Array.from({ length: days }, (_, day) =>
-    toDateOnly(new Date(start + day * MS_PER_DAY))
-  ).flatMap((dateOfDeparture) =>
-    routeIds.map((routeId) => ({
-      routeId,
-      dateOfDeparture,
-      allSeats: SEATS_PER_BUS,
-      freeSeats: SEATS_PER_BUS
-    }))
-  );
+  const routes = LINES.flatMap(directions);
+  return Array.from({ length: days }, (_, day) => new Date(start + day * MS_PER_DAY))
+    .flatMap((date) =>
+      routes
+        .filter(({ weekdays }) => weekdays.includes(date.getUTCDay()))
+        .map(({ routeId }) => ({
+          routeId,
+          dateOfDeparture: toDateOnly(date),
+          allSeats: SEATS_PER_BUS,
+          freeSeats: SEATS_PER_BUS
+        }))
+    );
 }
 
 module.exports = {

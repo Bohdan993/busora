@@ -139,14 +139,41 @@ test('route keys are admin-sortable codes and positions run 1..n', () => {
   }
 });
 
-test('flights run daily on every route from the start date', () => {
+test("flights run on each route's weekdays from the start date", () => {
+  // 2026-11-01 is a Sunday: only Prague → Kyiv (route 2) leaves that day
   const rows = flightRows(new Date('2026-11-01T22:30:00Z'));
-  assert.equal(rows.length, SCHEDULE_DAYS * 4);
-  assert.equal(rows[0].dateOfDeparture, '2026-11-01');
-  assert.equal(rows[rows.length - 1].dateOfDeparture, '2027-01-29');
-  assert.deepEqual(
-    rows.slice(0, 4).map((r) => r.routeId),
-    [1, 2, 3, 4]
-  );
+  assert.deepEqual(rows[0], {
+    routeId: 2,
+    dateOfDeparture: '2026-11-01',
+    allSeats: rows[0].allSeats,
+    freeSeats: rows[0].allSeats
+  });
+  for (const direction of LINES.flatMap(directionsOf)) {
+    const days = new Set(
+      rows
+        .filter((r) => r.routeId === direction.routeId)
+        .map((r) => new Date(`${r.dateOfDeparture}T00:00:00Z`).getUTCDay())
+    );
+    assert.deepEqual([...days].sort(), [...direction.weekdays].sort());
+  }
+  const weeks = SCHEDULE_DAYS / 7;
+  assert.ok(rows.length >= Math.floor(weeks) * 12 && rows.length <= Math.ceil(weeks) * 12);
   assert.ok(rows.every((r) => r.freeSeats === r.allSeats && r.allSeats > 0));
+});
+
+test('each inbound leaves the day its outbound bus arrives', () => {
+  for (const line of LINES) {
+    const nextDay = line.outbound.weekdays.map((d) => (d + 1) % 7);
+    assert.deepEqual([...line.inbound.weekdays].sort(), nextDay.sort());
+  }
+});
+
+test('the promo falls on days its routes actually run', () => {
+  for (const routeId of PROMO_DISCOUNT.routeIds) {
+    const direction = LINES.flatMap(directionsOf).find((d) => d.routeId === routeId);
+    assert.ok(
+      direction.weekdays.includes(PROMO_DISCOUNT.weekday),
+      `route ${routeId}`
+    );
+  }
 });
