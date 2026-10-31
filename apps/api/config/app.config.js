@@ -137,15 +137,6 @@ const compressionConfig = {
 };
 
 /**
- * View engine configuration
- */
-const viewConfig = {
-  viewsPath: 'views',
-  engine: 'pug',
-  cache: process.env.NODE_ENV === 'production'
-};
-
-/**
  * Server configuration
  */
 const serverConfig = {
@@ -162,6 +153,5 @@ module.exports = {
   helmetConfig,
   bodyParserConfig,
   compressionConfig,
-  viewConfig,
   serverConfig
 };

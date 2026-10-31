@@ -3,8 +3,6 @@
 const { Router } = require('express');
 const router = Router();
 const { Op } = require('sequelize');
-const pug = require('pug');
-const path = require('path');
 const sequelize = require('@database/models/index').sequelize;
 const {
   route: Route,
@@ -18,8 +16,11 @@ const {
   city: City,
   discount: Discount
 } = require('@database/models/index');
-const { isSpecialDate, loadLanguageFile, isValidDate } = require('@helpers');
-const { validateDates } = require('@middlewares/busFlightMiddlewares');
+const { isSpecialDate, isValidDate } = require('@helpers');
+const {
+  validateDates,
+  validateCityIds
+} = require('@middlewares/busFlightMiddlewares');
 const {
   filterBusFlights,
   transformBusFlights,
@@ -37,76 +38,75 @@ const { getExchangeRate } = require('@services/exchangeRates');
  * @swagger
  * /api/bus-flights:
  *   get:
- *     summary: Search for bus flights (main booking search)
+ *     summary: Search bus flights (starts a booking)
  *     description: >
- *       Returns available bus flights for the given route and date(s).
- *       On success the server creates/regenerates a booking session — all subsequent
- *       booking endpoints rely on this session being active.
+ *       Returns the offers for a route and date. Starts a new booking session
+ *       (sets the session cookie) with the first offer pre-selected; the other
+ *       booking endpoints work on this session.
  *     tags: [Bus Flights]
  *     parameters:
  *       - in: query
  *         name: originId
  *         required: true
- *         schema: { type: integer, example: 1 }
- *         description: Origin city ID
+ *         schema: { type: integer, minimum: 1, example: 1 }
  *       - in: query
  *         name: destinationId
  *         required: true
- *         schema: { type: integer, example: 3 }
- *         description: Destination city ID
+ *         schema: { type: integer, minimum: 1, example: 8 }
+ *       - in: query
+ *         name: adults
+ *         schema: { type: integer, minimum: 0, default: 1, example: 2 }
+ *       - in: query
+ *         name: children
+ *         schema: { type: integer, minimum: 0, default: 0, example: 1 }
+ *       - in: query
+ *         name: currencyAbbr
+ *         required: true
+ *         schema: { type: string, example: CZK }
+ *         description: Currency of the returned prices (UAH or CZK)
+ *       - in: query
+ *         name: languageCode
+ *         schema:
+ *           $ref: '#/components/schemas/LanguageCode'
  *       - in: query
  *         name: startDate
  *         required: true
- *         schema: { type: string, format: date, example: "2026-06-19" }
- *         description: Departure date (YYYY-MM-DD)
+ *         schema: { type: string, format: date, example: '2026-11-20' }
  *       - in: query
  *         name: endDate
- *         schema: { type: string, example: "one-way" }
- *         description: Return date or special value (`one-way`, `open-date`)
- *       - in: query
- *         name: adults
- *         schema: { type: integer, default: 1, example: 2 }
- *       - in: query
- *         name: children
- *         schema: { type: integer, default: 0, example: 1 }
- *       - in: query
- *         name: currencyAbbr
- *         schema: { type: string, example: UAH }
- *         description: Pricing currency abbreviation
- *       - in: query
- *         name: languageCode
- *         schema: { type: string, default: uk_UA }
- *       - in: query
- *         name: mode
- *         schema: { type: string, enum: [html, json], default: html }
- *         description: "`html` returns rendered ticket-list HTML; `json` returns raw flight data"
+ *         required: true
+ *         schema: { type: string, example: one-way }
+ *         description: Return date (round trip), or one-way / open-date
  *     responses:
  *       200:
- *         description: Available flights (HTML or JSON depending on mode)
+ *         description: Offers, first one selected
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   oneOf:
- *                     - type: string
- *                       description: Rendered HTML ticket list
- *                     - type: array
- *                       description: Transformed bus-flight objects
- *                 sessionExpiresTime:
- *                   type: integer
- *                   description: Session TTL in milliseconds
+ *               $ref: '#/components/schemas/BusFlightsResponse'
+ *       400:
+ *         description: BAD_REQUEST (ids, unknown currency) or INVALID_DATES
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: No flights found or no free seats
+ *         description: NO_FLIGHTS or NO_FREE_SEATS
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       503:
+ *         description: EXCHANGE_RATE_UNAVAILABLE
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', validateDates, async (req, res, next) => {
+// Ids first: the alternatives query builds a raw SQL literal from them
+const validateSearchQuery = [validateCityIds, validateDates];
+
+router.get('/', validateSearchQuery, async (req, res, next) => {
   try {
     let busFlights = [];
     let cities = [];
@@ -114,7 +114,6 @@ router.get('/', validateDates, async (req, res, next) => {
 
     const {
       languageCode = 'uk_UA',
-      mode = 'html',
       startDate = null,
       endDate = null,
       originId = null,
@@ -131,8 +130,6 @@ router.get('/', validateDates, async (req, res, next) => {
         }
       }
     });
-
-    const error404Translations = loadLanguageFile('404-error.js', lang?.code);
 
     let currency = await Currency.findOne({
       attributes: ['id', 'name', 'abbr', 'symbol'],
@@ -196,10 +193,10 @@ router.get('/', validateDates, async (req, res, next) => {
     busFlights = busFlights?.map((bf) => bf?.toJSON());
 
     if (!busFlights?.length) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: error404Translations,
-        isShowBtn: true
-      });
+      throw APIError.NotFoundError(
+        'no flights found',
+        APIError.codes.NO_FLIGHTS
+      );
     }
 
     const filteredBusFlightsWithFreeSeats = filterBusFlightsWithFreeSeats({
@@ -208,13 +205,10 @@ router.get('/', validateDates, async (req, res, next) => {
     });
 
     if (!filteredBusFlightsWithFreeSeats.length) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: loadLanguageFile(
-          '_404-error-no-free-seats.js',
-          lang?.code
-        ),
-        isShowBtn: true
-      });
+      throw APIError.NotFoundError(
+        'no flight has enough free seats',
+        APIError.codes.NO_FREE_SEATS
+      );
     }
 
     const filteredBusFlights = filterBusFlights({
@@ -226,10 +220,10 @@ router.get('/', validateDates, async (req, res, next) => {
     });
 
     if (!filteredBusFlights?.resultFrom?.length) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: error404Translations,
-        isShowBtn: true
-      });
+      throw APIError.NotFoundError(
+        'no flights found',
+        APIError.codes.NO_FLIGHTS
+      );
     }
 
     let placeIds = [
@@ -306,10 +300,10 @@ router.get('/', validateDates, async (req, res, next) => {
     cities = await City.findAll(cityQuery);
 
     if (!cities?.length || cities?.length !== 2) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: error404Translations,
-        isShowBtn: true
-      });
+      throw APIError.NotFoundError(
+        'no flights found',
+        APIError.codes.NO_FLIGHTS
+      );
     }
 
     cities = cities?.map((city) => city?.toJSON());
@@ -373,27 +367,11 @@ router.get('/', validateDates, async (req, res, next) => {
       return req.session.save(function (err) {
         if (err) return next(err);
 
-        if (mode?.toLowerCase() === 'json') {
-          return res.json({
-            status: 'ok',
-            data: transformedBusFlights,
-            sessionExpiresTime: constants.SESSION_TIME
-          });
-        }
-
-        if (mode?.toLowerCase() === 'html' || !mode) {
-          const template = path.resolve('views', 'ticket-list.pug');
-          const html = pug.renderFile(template, {
-            flightsData: transformedBusFlights,
-            translations: loadLanguageFile('ticket-list.js', lang?.code)
-          });
-
-          return res.json({
-            status: 'ok',
-            data: html,
-            sessionExpiresTime: constants.SESSION_TIME
-          });
-        }
+        return res.json({
+          status: 'ok',
+          data: transformedBusFlights,
+          sessionExpiresTime: constants.SESSION_TIME
+        });
       });
     });
   } catch (err) {
@@ -405,70 +383,77 @@ router.get('/', validateDates, async (req, res, next) => {
  * @swagger
  * /api/bus-flights/alternatives:
  *   get:
- *     summary: Get alternative bus flights for a route
- *     description: Returns nearby-date alternatives when no exact-date flight is available. Requires an active session.
+ *     summary: Nearest later flights for one direction
+ *     description: >
+ *       Up to three departure dates after startDate with free seats. For the
+ *       outbound direction without a selected flight this starts a new booking
+ *       session, like the main search.
  *     tags: [Bus Flights]
  *     parameters:
  *       - in: query
  *         name: originId
  *         required: true
- *         schema: { type: integer }
+ *         schema: { type: integer, minimum: 1, example: 1 }
  *       - in: query
  *         name: destinationId
  *         required: true
- *         schema: { type: integer }
+ *         schema: { type: integer, minimum: 1, example: 8 }
+ *       - in: query
+ *         name: adults
+ *         schema: { type: integer, minimum: 0, default: 1, example: 2 }
+ *       - in: query
+ *         name: children
+ *         schema: { type: integer, minimum: 0, default: 0, example: 1 }
+ *       - in: query
+ *         name: currencyAbbr
+ *         required: true
+ *         schema: { type: string, example: CZK }
+ *         description: Currency of the returned prices (UAH or CZK)
+ *       - in: query
+ *         name: languageCode
+ *         schema:
+ *           $ref: '#/components/schemas/LanguageCode'
  *       - in: query
  *         name: startDate
  *         required: true
  *         schema: { type: string, format: date }
- *         description: Reference date — alternatives on or after this date are returned
+ *         description: Alternatives depart after this date
  *       - in: query
  *         name: endDate
- *         schema: { type: string }
- *       - in: query
- *         name: adults
- *         schema: { type: integer, default: 1 }
- *       - in: query
- *         name: children
- *         schema: { type: integer, default: 0 }
+ *         required: true
+ *         schema: { type: string, example: one-way }
+ *         description: Return date (round trip), or one-way / open-date
  *       - in: query
  *         name: direction
  *         schema: { type: string, enum: [forwards, backwards], default: forwards }
- *         description: "`forwards` for outbound leg, `backwards` for return leg"
- *       - in: query
- *         name: currencyAbbr
- *         schema: { type: string }
- *       - in: query
- *         name: languageCode
- *         schema: { type: string, default: uk_UA }
- *       - in: query
- *         name: mode
- *         schema: { type: string, enum: [html, json], default: html }
+ *         description: forwards for the outbound leg, backwards for the return leg
  *     responses:
  *       200:
- *         description: Alternative flights grouped by departure date
+ *         description: Offers grouped by departure date
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   oneOf:
- *                     - type: string
- *                       description: Rendered HTML
- *                     - type: array
- *                 sessionExpiresTime:
- *                   type: integer
+ *               $ref: '#/components/schemas/AlternativesResponse'
+ *       400:
+ *         description: BAD_REQUEST or INVALID_DATES
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: No alternatives found
+ *         description: NO_ALTERNATIVES or NO_FREE_SEATS
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       503:
+ *         description: EXCHANGE_RATE_UNAVAILABLE
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/alternatives', validateDates, async (req, res, next) => {
+router.get('/alternatives', validateSearchQuery, async (req, res, next) => {
   try {
     let busFlights = [];
     let cities = [];
@@ -476,7 +461,6 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
 
     const {
       languageCode = 'uk_UA',
-      mode = 'html',
       startDate = null,
       endDate = null,
       originId = null,
@@ -511,11 +495,6 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
     }
     if (!currency) throw APIError.BadRequestError('Unknown currency');
 
-    const error404Translations = loadLanguageFile(
-      '_404-error-no-alternative-tickets.js',
-      lang?.code
-    );
-
     const limit = constants.LIMIT_OF_ALTERNATIVE_BUS_FLIGHTS;
 
     let query = {
@@ -545,10 +524,10 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
           where: {
             [Op.and]: [
               sequelize.literal(
-                `JSON_CONTAINS(route.routePath, '{"cityId": ${originId}}', '$.onboarding') = 1`
+                `JSON_CONTAINS(route.routePath, '{"cityId": ${Number(originId)}}', '$.onboarding') = 1`
               ),
               sequelize.literal(
-                `JSON_CONTAINS(route.routePath, '{"cityId": ${destinationId}}', '$.outboarding') = 1`
+                `JSON_CONTAINS(route.routePath, '{"cityId": ${Number(destinationId)}}', '$.outboarding') = 1`
               )
             ]
           }
@@ -569,10 +548,10 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
     busFlights = busFlights?.map((bf) => bf?.toJSON());
 
     if (!busFlights?.length) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: error404Translations,
-        isShowBtn: false
-      });
+      throw APIError.NotFoundError(
+        'no alternative flights found',
+        APIError.codes.NO_ALTERNATIVES
+      );
     }
 
     const filteredBusFlightsWithFreeSeats = filterBusFlightsWithFreeSeats({
@@ -581,13 +560,10 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
     });
 
     if (!filteredBusFlightsWithFreeSeats.length) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: loadLanguageFile(
-          '_404-error-no-alternative-tickets-free-seats.js',
-          lang?.code
-        ),
-        isShowBtn: false
-      });
+      throw APIError.NotFoundError(
+        'no flight has enough free seats',
+        APIError.codes.NO_FREE_SEATS
+      );
     }
 
     const filteredBusFlights = filterBusFlights({
@@ -600,10 +576,10 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
     });
 
     if (!filteredBusFlights?.resultFrom?.length) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: error404Translations,
-        isShowBtn: false
-      });
+      throw APIError.NotFoundError(
+        'no alternative flights found',
+        APIError.codes.NO_ALTERNATIVES
+      );
     }
 
     let placeIds = [
@@ -680,10 +656,10 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
     cities = await City.findAll(cityQuery);
 
     if (!cities?.length || cities?.length !== 2) {
-      throw APIError.NotFoundError('not found', 'error-404', {
-        translations: error404Translations,
-        isShowBtn: false
-      });
+      throw APIError.NotFoundError(
+        'no alternative flights found',
+        APIError.codes.NO_ALTERNATIVES
+      );
     }
 
     cities = cities?.map((city) => city?.toJSON());
@@ -740,44 +716,16 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
     function saveSessionCb(err) {
       if (err) return next(err);
 
-      if (mode?.toLowerCase() === 'json') {
-        return res.json({
-          status: 'ok',
-          data: transformedBusFlights,
-          sessionExpiresTime: constants.SESSION_TIME
-        });
-      }
-
-      if (mode?.toLowerCase() === 'html' || !mode) {
-        const template = path.resolve('views', 'alternative-tickets.pug');
-        const html = pug.renderFile(template, {
-          isForwards: direction === constants.FORWARDS,
-          cityFrom: cities
-            ?.filter((city) =>
-              city?.cityattrs.find(
-                (el) => String(el?.cityId) === String(originId)
-              )
-            )?.[0]
-            ?.cityattrs?.find((el) => el?.language?.code === languageCode)
-            ?.name,
-          cityTo: cities
-            ?.filter((city) =>
-              city?.cityattrs.find(
-                (el) => String(el?.cityId) === String(destinationId)
-              )
-            )?.[0]
-            ?.cityattrs?.find((el) => el?.language?.code === languageCode)
-            ?.name,
-          flightsData: transformedBusFlights,
-          translations: loadLanguageFile('ticket-list.js', lang?.code)
-        });
-
-        return res.json({
-          status: 'ok',
-          data: html,
-          sessionExpiresTime: constants.SESSION_TIME
-        });
-      }
+      // The session keeps [display date, flights] pairs (read by /select);
+      // clients get one object per departure date, keyed by the ISO date.
+      return res.json({
+        status: 'ok',
+        data: transformedBusFlights.map(([, flights]) => ({
+          date: flights[0].dates.departurePure,
+          flights
+        })),
+        sessionExpiresTime: constants.SESSION_TIME
+      });
     }
 
     if (
@@ -830,43 +778,40 @@ router.get('/alternatives', validateDates, async (req, res, next) => {
  * @swagger
  * /api/bus-flights/available-dates:
  *   get:
- *     summary: Get available departure dates for the calendar
- *     description: >
- *       Returns dates that have at least one flight with free seats for the given
- *       origin/destination pair. Used by the booking calendar to highlight bookable dates.
+ *     summary: Bookable departure dates for the calendar
+ *     description: Dates with at least one flight with free seats for the city pair.
  *     tags: [Bus Flights]
  *     parameters:
  *       - in: query
  *         name: originId
- *         schema: { type: integer }
+ *         required: true
+ *         schema: { type: integer, minimum: 1 }
  *       - in: query
  *         name: destinationId
- *         schema: { type: integer }
+ *         required: true
+ *         schema: { type: integer, minimum: 1 }
  *       - in: query
  *         name: startDate
  *         schema: { type: string, format: date }
- *         description: Only return dates on or after this date (defaults to today)
+ *         description: Only dates on or after this one (defaults to today)
  *       - in: query
  *         name: direction
  *         schema: { type: string, enum: [forwards, backwards], default: forwards }
  *     responses:
  *       200:
- *         description: Array of available dates
+ *         description: ISO dates
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   type: array
- *                   items:
- *                     type: string
- *                     format: date
- *                   example: ["2026-06-19", "2026-06-26"]
+ *               $ref: '#/components/schemas/AvailableDatesResponse'
+ *       400:
+ *         description: BAD_REQUEST (ids)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/available-dates', async (req, res, next) => {
+router.get('/available-dates', validateCityIds, async (req, res, next) => {
   try {
     const {
       originId = null,
@@ -895,53 +840,33 @@ router.get('/available-dates', async (req, res, next) => {
  * @swagger
  * /api/bus-flights/select:
  *   post:
- *     summary: Select a bus flight for the active booking session
+ *     summary: Select an offer for the booking
  *     description: >
- *       Stores the chosen flight in the session. Must be called after a successful
- *       search (`GET /api/bus-flights`). `isMain=true` selects from the main search
- *       results; `isMain=false` selects from the alternatives list.
+ *       Selects an offer returned by the search or the alternatives in this
+ *       session. For a round trip from alternatives, select the outbound offer
+ *       (direction forwards) and then the return offer (direction backwards).
  *     tags: [Bus Flights]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [id]
- *             properties:
- *               id:
- *                 type: string
- *                 description: Bus-flight ID to select
- *                 example: "2165"
- *               isMain:
- *                 type: boolean
- *                 default: true
- *                 description: Select from main results (true) or alternatives (false)
- *               direction:
- *                 type: string
- *                 enum: [forwards, backwards]
- *                 default: forwards
- *                 description: Which leg is being selected (alternatives only)
+ *             $ref: '#/components/schemas/SelectFlightRequest'
  *     responses:
  *       200:
- *         description: Flight selected and stored in session
+ *         description: Offer selected
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 sessionExpiresTime:
- *                   type: integer
+ *               $ref: '#/components/schemas/SessionOkResponse'
  *       400:
- *         description: Invalid flight ID
+ *         description: BAD_REQUEST — no such offer in this session
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: Session not started
+ *         description: SESSION_NOT_STARTED
  *         content:
  *           application/json:
  *             schema:

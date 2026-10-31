@@ -34,51 +34,32 @@ const MOCK_OUTCOMES = new Set(['success', 'failure']);
  *   post:
  *     summary: Start checkout for the current booking
  *     description: >
- *       Calculates the price, saves the booking session to the DB and returns a
- *       checkout signed by the configured payment provider. Requires a complete
- *       session: started → flight selected → passengers validated.
- *       With `provider: liqpay`, open the LiqPay widget with `data`/`signature`.
- *       With `provider: mock`, show a fake payment page and finish it with
- *       `POST /api/payment/mock/complete`.
+ *       Recalculates the price on the server, saves the booking for the payment
+ *       callback and returns a checkout signed by the configured provider.
+ *       With provider liqpay, open the LiqPay widget with data and signature.
+ *       With provider mock, show a fake payment page and finish it with
+ *       POST /api/payment/mock/complete.
  *     tags: [Payment]
  *     parameters:
  *       - in: query
  *         name: languageCode
- *         schema: { type: string, default: uk_UA }
+ *         schema:
+ *           $ref: '#/components/schemas/LanguageCode'
  *     responses:
  *       200:
  *         description: Signed checkout
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   type: object
- *                   properties:
- *                     provider:
- *                       type: string
- *                       enum: [mock, liqpay]
- *                     data:
- *                       type: string
- *                       description: Base64-encoded JSON checkout
- *                     signature:
- *                       type: string
- *                     amount:
- *                       type: integer
- *                       description: Amount charged, in UAH
- *                     currency:
- *                       type: string
- *                       example: UAH
- *                     hasDiscount:
- *                       type: boolean
- *                       description: Whether the BUS_FLIGHT discount is active for this booking
- *                 sessionExpiresTime:
- *                   type: integer
+ *               $ref: '#/components/schemas/CheckoutResponse'
  *       401:
- *         description: Session not started / flight not selected / passengers missing
+ *         description: SESSION_NOT_STARTED, FLIGHT_NOT_SELECTED or PASSENGERS_MISSING
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       503:
+ *         description: EXCHANGE_RATE_UNAVAILABLE
  *         content:
  *           application/json:
  *             schema:
@@ -165,54 +146,37 @@ router.post(
  *   post:
  *     summary: Finish a mock checkout (demo payments only)
  *     description: >
- *       Available only when PAYMENT_PROVIDER is `mock`. Simulates the payment
- *       result for a checkout from `POST /api/payment`. On success the ticket,
- *       per-passenger PDFs and email are produced exactly as for a real
- *       payment. Completing the same checkout again does not create a second
- *       ticket. The returned `data`/`signature` work with
- *       `/api/tickets/generate` and `/api/tickets/download-pdf`.
+ *       Available only when PAYMENT_PROVIDER is mock. On success the ticket,
+ *       per-passenger PDFs and email are produced exactly as for a real payment;
+ *       completing the same checkout again creates nothing new. The returned
+ *       data and signature work with /api/tickets/summary and
+ *       /api/tickets/download-pdf.
  *     tags: [Payment]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [data, signature, outcome]
- *             properties:
- *               data:
- *                 type: string
- *                 description: Checkout `data` from `POST /api/payment`
- *               signature:
- *                 type: string
- *                 description: Checkout `signature` from `POST /api/payment`
- *               outcome:
- *                 type: string
- *                 enum: [success, failure]
+ *             $ref: '#/components/schemas/MockCompleteRequest'
  *     responses:
  *       200:
- *         description: Payment result with its signed callback payload
+ *         description: Payment result with its signed payload
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   type: object
- *                   properties:
- *                     outcome:
- *                       type: string
- *                       enum: [success, failure]
- *                     data:
- *                       type: string
- *                     signature:
- *                       type: string
+ *               $ref: '#/components/schemas/MockCompletionResponse'
  *       400:
- *         description: Invalid signature or outcome
+ *         description: BAD_REQUEST — invalid signature or outcome
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: The mock provider is not enabled
+ *         description: NOT_FOUND — the mock provider is not enabled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/mock/complete', async (req, res, next) => {
   try {

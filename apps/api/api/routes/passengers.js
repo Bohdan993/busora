@@ -1,17 +1,16 @@
 const { Router } = require('express');
 const router = Router();
 const { Op } = require('sequelize');
-const pug = require('pug');
-const path = require('path');
 const {
   language: Language,
   discount: Discount,
   discountattributes: DiscountAttributes
 } = require('@database/models/index');
-const { loadLanguageFile, transformTimestampToDate } = require('@helpers');
+const { loadLanguageFile } = require('@helpers');
 const {
   mapDiscounts,
-  filterByDateDiscounts
+  filterByDateDiscounts,
+  toPassengerFormDiscounts
 } = require('@services/discountService');
 const {
   validatePassengersData,
@@ -21,9 +20,6 @@ const { checkIfSessionIsStarted } = require('@middlewares/sessionMiddlewares');
 const {
   checkIfBusFlightSelected
 } = require('@middlewares/busFlightMiddlewares');
-const {
-  checkIfPassengersInfoExists
-} = require('@middlewares/passengersMiddleware');
 const constants = require('@helpers/constants.js');
 const APIError = require('@exeptions/api-error');
 
@@ -31,47 +27,25 @@ const APIError = require('@exeptions/api-error');
  * @swagger
  * /api/passengers:
  *   get:
- *     summary: Get passenger form data for the active booking
+ *     summary: Data for the passenger form
  *     description: >
- *       Returns available discounts and renders (or returns) the passenger
- *       details form. Requires an active session with a selected flight.
+ *       Passenger counts, the price per passenger, the personal discounts that
+ *       can be chosen (names in languageCode) and any details entered earlier.
  *     tags: [Passengers]
  *     parameters:
  *       - in: query
  *         name: languageCode
- *         schema: { type: string, default: uk_UA }
- *       - in: query
- *         name: mode
- *         schema: { type: string, enum: [html, json], default: html }
- *       - in: query
- *         name: type
- *         schema: { type: string, enum: [standart, check], default: standart }
- *         description: "`check` renders the info-check form; `standart` renders the main passenger form"
+ *         schema:
+ *           $ref: '#/components/schemas/LanguageCode'
  *     responses:
  *       200:
  *         description: Passenger form data
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   oneOf:
- *                     - type: string
- *                       description: Rendered HTML form
- *                     - type: object
- *                       properties:
- *                         adults: { type: integer }
- *                         children: { type: integer }
- *                         discounts:
- *                           type: array
- *                           items: { type: object }
- *                 sessionExpiresTime:
- *                   type: integer
+ *               $ref: '#/components/schemas/PassengerFormResponse'
  *       401:
- *         description: Session not started or flight not selected
+ *         description: SESSION_NOT_STARTED (no or expired booking session) or FLIGHT_NOT_SELECTED
  *         content:
  *           application/json:
  *             schema:
@@ -79,25 +53,18 @@ const APIError = require('@exeptions/api-error');
  */
 router.get(
   '/',
-  [
-    checkIfSessionIsStarted,
-    checkIfBusFlightSelected,
-    checkIfPassengersInfoExists
-  ],
+  [checkIfSessionIsStarted, checkIfBusFlightSelected],
   async (req, res, next) => {
     try {
       let discounts = [];
 
-      const {
-        languageCode = 'uk_UA',
-        mode = 'html',
-        type = 'standart'
-      } = req?.query ?? {};
+      const { languageCode = 'uk_UA' } = req?.query ?? {};
 
       const {
         adults = 1,
         children = 0,
         selectedBusFlight,
+        currency,
         passengersInfo
       } = req.session;
 
@@ -148,39 +115,22 @@ router.get(
 
       return req.session.save(function (err) {
         if (err) return next(err);
-        if (mode?.toLowerCase() === 'json') {
-          return res.json({
-            status: 'ok',
-            data: { adults, children, discounts },
-            sessionExpiresTime: constants.SESSION_TIME
-          });
-        }
 
-        if (mode?.toLowerCase() === 'html' || !mode) {
-          const template = path.resolve(
-            'views',
-            type === 'check' ? 'info-check-form.pug' : 'passengers-form.pug'
-          );
-          const html = pug.renderFile(template, {
-            adults,
-            children,
-            discounts,
-            constants,
-            translations: loadLanguageFile('passengers-form.js', lang?.code),
-            ticketPrice: selectedBusFlight.purePrice,
-            passengersInfo: passengersInfo
-              ? Object.entries(passengersInfo)
-              : null,
-            transformTimestampToDate,
-            showDiscounts: !selectedBusFlight.hasDiscount
-          });
-
-          return res.json({
-            status: 'ok',
-            data: html,
-            sessionExpiresTime: constants.SESSION_TIME
-          });
-        }
+        return res.json({
+          status: 'ok',
+          data: {
+            adults: Number(adults),
+            children: Number(children),
+            ticketPrice: Number(selectedBusFlight.purePrice),
+            currency: { abbr: currency?.abbr, symbol: currency?.symbol },
+            // Personal discounts don't stack with a discounted (promo) flight
+            showDiscounts: !selectedBusFlight.hasDiscount,
+            discounts: toPassengerFormDiscounts(discounts),
+            // What was entered before, so going back keeps the form filled
+            passengersInfo: passengersInfo ?? null
+          },
+          sessionExpiresTime: constants.SESSION_TIME
+        });
       });
     } catch (err) {
       return next(err);
@@ -192,57 +142,37 @@ router.get(
  * @swagger
  * /api/passengers/validate:
  *   post:
- *     summary: Validate and save passenger data to the session
+ *     summary: Validate passenger details and save them to the booking
  *     description: >
- *       Validates the submitted passenger form data and stores it in the session.
- *       Must be called before `POST /api/payment`.
+ *       Phones must be Ukrainian (+380) or Czech (+420). The first adult's
+ *       email receives the tickets. Must succeed before POST /api/payment.
  *     tags: [Passengers]
  *     parameters:
  *       - in: query
  *         name: languageCode
- *         schema: { type: string, default: uk_UA }
+ *         schema:
+ *           $ref: '#/components/schemas/LanguageCode'
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [passengersData]
- *             properties:
- *               passengersData:
- *                 type: object
- *                 description: >
- *                   Key-value map of passenger data. Each key is a passenger block
- *                   ID (e.g. `adult-passenger-1`); the value is an object with
- *                   fields like `name-1`, `last-name-1`, `phone-1`, `date-of-birth-1`
- *                   (ISO `YYYY-MM-DD`), `email-1`, `discount-1`.
- *                 example:
- *                   adult-passenger-1:
- *                     name-1: Ivan
- *                     last-name-1: Petrenko
- *                     phone-1: "+380671234567"
- *                     date-of-birth-1: "1985-03-20"
- *                     email-1: ivan@example.com
+ *             $ref: '#/components/schemas/ValidatePassengersRequest'
  *     responses:
  *       200:
- *         description: Passenger data valid and saved to session
+ *         description: Details valid and saved
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 sessionExpiresTime:
- *                   type: integer
- *       400:
- *         description: Validation errors
+ *               $ref: '#/components/schemas/SessionOkResponse'
+ *       401:
+ *         description: SESSION_NOT_STARTED (no or expired booking session) or FLIGHT_NOT_SELECTED
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Session not started or flight not selected
+ *       422:
+ *         description: VALIDATION_FAILED; errors maps each invalid field to messages in languageCode
  *         content:
  *           application/json:
  *             schema:

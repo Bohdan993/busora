@@ -71,7 +71,26 @@ function filterByDateDiscounts(discounts) {
   return filteredDiscounts;
 }
 
+/**
+ * Shapes grouped discounts ([group, discounts] pairs from mapDiscounts) for
+ * API clients: one object per group, each discount flattened to the fields a
+ * passenger form needs. `name` is in the language the discounts were loaded in.
+ */
+function toPassengerFormDiscounts(groupedDiscounts) {
+  return groupedDiscounts.map(([group, discounts]) => ({
+    group,
+    items: discounts.map((discount) => ({
+      id: discount.id,
+      name: discount.discountattrs?.[0]?.name ?? null,
+      coef: Number(discount.coef),
+      minAge: discount.minAge ?? null,
+      maxAge: discount.maxAge ?? null
+    }))
+  }));
+}
+
 module.exports = {
   mapDiscounts,
-  filterByDateDiscounts
+  filterByDateDiscounts,
+  toPassengerFormDiscounts
 };

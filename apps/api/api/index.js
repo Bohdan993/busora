@@ -29,7 +29,6 @@ const {
   helmetConfig,
   bodyParserConfig,
   compressionConfig,
-  viewConfig,
   serverConfig
 } = require('../config/app.config');
 const { responseHelpers } = require('@helpers/responseFormatter');
@@ -72,12 +71,12 @@ const citiesRoute = require('@api/routes/cities');
 const currenciesRoute = require('@api/routes/currencies');
 const busflightsRoute = require('@api/routes/busFlights');
 const passengersRoute = require('@api/routes/passengers');
-const translationsRoute = require('@api/routes/translations');
 const paymentRoute = require('@api/routes/payment');
 const ticketsRoute = require('@api/routes/tickets');
 const sessionDataRoute = require('@api/routes/sessionData');
 // const insertDataRoute = require("@api/routes/insertDatainDB");
 const { handleError } = require('@middlewares/errorMiddlewares');
+const APIError = require('@exeptions/api-error');
 const { preventSQLInjection } = require('@middlewares/validationMiddleware');
 const { validateLanguageCode } = require('@middlewares/languageMiddleware');
 
@@ -129,9 +128,6 @@ validate.extend(validate.validators.datetime, {
   }
 });
 
-app.set('views', path.resolve('views'));
-app.set('view engine', 'pug');
-app.set('view cache', true);
 app.set('trust proxy', 1);
 app.set('x-powered-by', false);
 
@@ -219,7 +215,6 @@ app.use('/api/currencies', currenciesRoute);
 app.use('/api/bus-flights', busflightsRoute);
 app.use('/api/passengers', passengersRoute);
 app.use('/api/tickets', ticketsRoute);
-app.use('/api/translations', translationsRoute);
 app.use('/api/payment', paymentRoute);
 app.use('/api/current-data', sessionDataRoute);
 // app.use("/api/insert", insertDataRoute);
@@ -235,6 +230,11 @@ app.use('/api/admin/search', searchAdminRoute);
 app.use('/api/admin/tickets', ticketsAdminRoute);
 // app.use("/api/admin/passengers", passengersAdminRoute);
 // app.use("/api/admin/users", authRoute);
+
+// Unknown API paths answer in the same JSON error shape as everything else
+app.use('/api', (req, res, next) =>
+  next(APIError.NotFoundError(`no route ${req.method} ${req.originalUrl}`))
+);
 
 app.use(handleError);
 
@@ -263,6 +263,8 @@ async function start() {
   }
 }
 
+// `app` is exported for in-process HTTP tests; `start` is what index.js runs
 module.exports = {
+  app,
   start
 };

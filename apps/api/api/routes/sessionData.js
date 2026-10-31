@@ -15,33 +15,17 @@ const constants = require('@helpers/constants.js');
  * @swagger
  * /api/current-data:
  *   get:
- *     summary: Get current booking session data
- *     description: Returns summary data from the active session (passenger count, price, dates).
+ *     summary: Booking summary for the review step
  *     tags: [Session]
  *     responses:
  *       200:
- *         description: Current session summary
+ *         description: Current booking
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   type: object
- *                   properties:
- *                     adults: { type: integer }
- *                     children: { type: integer }
- *                     price: { type: number }
- *                     startDate: { type: string, format: date }
- *                     endDate: { type: string }
- *                     bookingPageParams: { type: object }
- *                     currencySymbol: { type: string, example: "₴" }
- *                 sessionExpiresTime:
- *                   type: integer
+ *               $ref: '#/components/schemas/CurrentDataResponse'
  *       401:
- *         description: Session not started
+ *         description: SESSION_NOT_STARTED (no or expired booking session) or FLIGHT_NOT_SELECTED
  *         content:
  *           application/json:
  *             schema:
@@ -70,8 +54,8 @@ router.get(
         );
 
       const data = {
-        adults,
-        children,
+        adults: Number(adults),
+        children: Number(children),
         price,
         startDate,
         endDate,
@@ -104,39 +88,37 @@ router.get(
  * @swagger
  * /api/current-data:
  *   post:
- *     summary: Store client UI state in the booking session
+ *     summary: Save client state in the booking session
  *     description: >
- *       Stores `bookingPageParams` (HTML-entity-encoded) so the frontend can
- *       restore booking page query parameters across navigation. Any other
- *       key, or a non-string value, is rejected with 400 — prices, rates and
- *       passenger data are only ever set by the server.
+ *       Stores bookingPageParams so the client can restore its booking page.
+ *       Any other key, or a non-string value, is rejected with 400 — prices,
+ *       rates and passenger data are only ever set by the server.
  *     tags: [Session]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             additionalProperties: false
- *             properties:
- *               bookingPageParams:
- *                 type: string
- *             example:
- *               bookingPageParams: "origin=1&destination=3&departure=2026-06-19"
+ *             $ref: '#/components/schemas/SessionUpdateRequest'
  *     responses:
  *       200:
- *         description: Data saved to session
+ *         description: Saved
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 sessionExpiresTime:
- *                   type: integer
+ *               $ref: '#/components/schemas/SessionOkResponse'
+ *       400:
+ *         description: BAD_REQUEST — a key other than bookingPageParams
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: Session not started
+ *         description: SESSION_NOT_STARTED
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', [checkIfSessionIsStarted], async (req, res, next) => {
   try {
@@ -159,15 +141,16 @@ router.post('/', [checkIfSessionIsStarted], async (req, res, next) => {
  * @swagger
  * /api/current-data/is-started:
  *   get:
- *     summary: Check whether the booking session is active
+ *     summary: Whether a booking session is active
  *     tags: [Session]
  *     responses:
  *       200:
- *         description: Session status
+ *         description: Session active
  *         content:
  *           application/json:
  *             schema:
  *               type: object
+ *               required: [status, active]
  *               properties:
  *                 status:
  *                   $ref: '#/components/schemas/OkStatus'
@@ -175,7 +158,11 @@ router.post('/', [checkIfSessionIsStarted], async (req, res, next) => {
  *                   type: boolean
  *                   example: true
  *       401:
- *         description: Session not started
+ *         description: SESSION_NOT_STARTED
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/is-started', [checkIfSessionIsStarted], async (req, res, next) => {
   try {

@@ -153,7 +153,7 @@ async function generateHTMLTicket({
   places,
   ticket,
   constants,
-  template = 'ticket.pug',
+  template = 'full-ticket.pug',
   transformTimestampToDate = () => {}
 } = {}) {
   const ticketTemplate = path.resolve('views', template);

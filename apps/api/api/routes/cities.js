@@ -2,8 +2,6 @@
 
 const { Router } = require('express');
 const router = Router();
-const pug = require('pug');
-const path = require('path');
 const { Op } = require('sequelize');
 const {
   country: Country,
@@ -35,54 +33,27 @@ function mapCities(cities) {
  * @swagger
  * /api/cities:
  *   get:
- *     summary: Get all cities grouped by country
+ *     summary: Cities grouped by country
+ *     description: Only cities that have a name in the requested language are listed.
  *     tags: [Cities]
  *     parameters:
  *       - in: query
  *         name: languageCode
  *         schema:
- *           type: string
- *           example: uk_UA
- *         description: Language code for localised city/country names (default uk_UA)
- *       - in: query
- *         name: mode
- *         schema:
- *           type: string
- *           enum: [html, json]
- *           default: html
- *         description: Response format — `html` returns a rendered Pug dropdown, `json` returns plain data
+ *           $ref: '#/components/schemas/LanguageCode'
  *       - in: query
  *         name: excludedCountry
- *         schema:
- *           type: integer
- *         description: Country ID to exclude from results
+ *         schema: { type: integer }
+ *         description: Leave out this country's cities
  *     responses:
  *       200:
- *         description: City list
+ *         description: Cities by country
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   $ref: '#/components/schemas/OkStatus'
- *                 data:
- *                   oneOf:
- *                     - type: string
- *                       description: Rendered HTML dropdown (mode=html)
- *                     - type: array
- *                       description: Structured city/country list (mode=json)
- *                       items:
- *                         type: object
- *                         properties:
- *                           country:
- *                             type: object
- *                           cities:
- *                             type: array
- *                             items:
- *                               type: object
- *       500:
- *         description: Server error
+ *               $ref: '#/components/schemas/CitiesResponse'
+ *       400:
+ *         description: Unknown language code
  *         content:
  *           application/json:
  *             schema:
@@ -92,11 +63,7 @@ router.get('/', async (req, res, next) => {
   try {
     let cities = [];
 
-    const {
-      languageCode = 'uk_UA',
-      mode = 'html',
-      excludedCountry = null
-    } = req?.query ?? {};
+    const { languageCode = 'uk_UA', excludedCountry = null } = req?.query ?? {};
 
     const lang = await Language.findOne({
       where: {
@@ -173,22 +140,10 @@ router.get('/', async (req, res, next) => {
     });
 
     cities = cities?.map((city) => city?.toJSON());
-    const resultCities = mapCities(cities);
 
-    if (mode?.toLowerCase() === 'json') {
-      return res.json({
-        status: 'ok',
-        data: resultCities
-      });
-    }
-
-    // Default to HTML for any non-json mode so an unrecognised `mode` value
-    // never leaves the request hanging without a response.
-    const template = path.resolve('views', 'cities-dropdown.pug');
-    const html = pug.renderFile(template, { data: resultCities });
     return res.json({
       status: 'ok',
-      data: html
+      data: mapCities(cities)
     });
   } catch (err) {
     return next(err);

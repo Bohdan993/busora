@@ -37,21 +37,48 @@ test('maps ExchangeRateError to 503 without leaking the internal message', () =>
 
   assert.equal(res.statusCode, 503);
   assert.equal(res.body.status, 'fail');
-  assert.doesNotMatch(res.body.error, /NBU|502/);
+  assert.equal(res.body.code, 'EXCHANGE_RATE_UNAVAILABLE');
+  assert.doesNotMatch(res.body.message, /NBU|502/);
 });
 
-test('unknown errors still map to 500', () => {
+test('unknown errors map to 500 without leaking their message', () => {
   const res = fakeResponse();
-  handleError(new Error('boom'), {}, res);
+  handleError(new Error("ER_PARSE_ERROR near 'tickets'"), {}, res);
 
   assert.equal(res.statusCode, 500);
+  assert.equal(res.body.code, 'SERVER_ERROR');
+  assert.doesNotMatch(JSON.stringify(res.body), /ER_PARSE_ERROR|tickets/);
 });
 
-test('an APIError without a template is answered with JSON, not a render', () => {
+test('an APIError is answered with its status, code and field errors', () => {
   const res = fakeResponse();
-  res.render = () => assert.fail('must not render without a template');
-  handleError(APIError.NotFoundError('ticket not found'), {}, res);
+  const fieldErrors = [{ field: 'name-1', message: 'Required' }];
+  handleError(
+    APIError.ValidationError('validation error', fieldErrors),
+    {},
+    res
+  );
 
-  assert.equal(res.statusCode, 404);
-  assert.equal(res.body.status, 'ticket not found');
+  assert.equal(res.statusCode, 422);
+  assert.deepEqual(res.body, {
+    status: 'fail',
+    code: 'VALIDATION_FAILED',
+    message: 'validation error',
+    errors: fieldErrors
+  });
+});
+
+test('domain errors carry their specific code', () => {
+  const res = fakeResponse();
+  handleError(
+    APIError.UnauthorizedError(
+      'session expired',
+      APIError.codes.SESSION_NOT_STARTED
+    ),
+    {},
+    res
+  );
+
+  assert.equal(res.statusCode, 401);
+  assert.equal(res.body.code, 'SESSION_NOT_STARTED');
 });

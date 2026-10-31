@@ -58,7 +58,7 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *               $ref: '#/components/schemas/AdminErrorResponse'
  */
 router.post(
   '/register',
@@ -151,7 +151,7 @@ router.post(
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *               $ref: '#/components/schemas/AdminErrorResponse'
  */
 router.post(
   '/login',

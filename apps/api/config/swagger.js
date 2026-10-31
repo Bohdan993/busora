@@ -1,6 +1,7 @@
 /** @format */
 
 const swaggerJsdoc = require('swagger-jsdoc');
+const bookingSchemas = require('./swaggerBookingSchemas');
 
 const options = {
   definition: {
@@ -9,28 +10,29 @@ const options = {
       title: 'Busora API',
       version: '1.0.0',
       description:
-        'Busora bus-ticket booking API.\n\n' +
-        '**Public flow:** search cities → search flights → select flight → fill passengers → pay via LiqPay → download PDF ticket.\n\n' +
+        'Busora bus-ticket booking API (educational demo).\n\n' +
+        '**Booking flow:** cities → search flights → select a flight → passenger form → validate passengers → ' +
+        'start checkout → pay (mock page or LiqPay) → ticket summary and PDF download. ' +
+        'Booking state lives in a session cookie (`busora-sess`), so a browser client must send credentials; ' +
+        'the web app calls the API through a same-origin proxy.\n\n' +
+        '**Errors** share one shape (`ErrorResponse`) with a machine-readable `code`.\n\n' +
         '**Admin flow:** JWT login required. Access token goes in `Authorization: Bearer <token>` header.'
     },
-    servers: [
-      { url: 'https://localhost:5000', description: 'Local dev (HTTPS)' }
-    ],
+    servers: [{ url: 'http://localhost:5000', description: 'Local dev' }],
     tags: [
       { name: 'Cities', description: 'Public city/country lookup' },
       { name: 'Currencies', description: 'Currency lookup by abbreviation' },
       { name: 'Bus Flights', description: 'Flight search and selection' },
       { name: 'Passengers', description: 'Passenger form and validation' },
-      {
-        name: 'Tickets',
-        description: 'Ticket creation and PDF download (LiqPay callbacks)'
-      },
+      { name: 'Session', description: 'Booking session state' },
       {
         name: 'Payment',
-        description: 'LiqPay payment widget and server callback'
+        description: 'Checkout (mock or LiqPay) and the provider callback'
       },
-      { name: 'Session', description: 'Session state endpoints' },
-      { name: 'Translations', description: 'Localisation string bundles' },
+      {
+        name: 'Tickets',
+        description: 'Ticket summary and PDF download after payment'
+      },
       { name: 'Admin / Auth', description: 'Admin authentication' },
       {
         name: 'Admin / Bus Flights',
@@ -63,29 +65,24 @@ const options = {
         }
       },
       schemas: {
-        // ── Shared primitives ──────────────────────────────────────────────
-        OkStatus: { type: 'string', enum: ['ok'], example: 'ok' },
+        // ── Public booking flow ────────────────────────────────────────────
+        ...bookingSchemas,
         SuccessResponse: {
           type: 'object',
           properties: {
             status: { $ref: '#/components/schemas/OkStatus' }
           }
         },
-        ErrorResponse: {
+        // ── Admin ──────────────────────────────────────────────────────────
+        AdminErrorResponse: {
           type: 'object',
           properties: {
-            status: { type: 'string', example: 'error' },
-            message: { type: 'string', example: 'Validation error' },
-            errors: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  field: { type: 'string' },
-                  message: { type: 'string' }
-                }
-              }
-            }
+            status: {
+              type: 'string',
+              description: 'The error message',
+              example: 'Користувач не авторизований'
+            },
+            error: { type: 'array', items: { type: 'object' } }
           }
         },
         PaginationMeta: {

@@ -8,13 +8,12 @@ function handleError(err, req, res, next) {
   console.error('[API error]: ', err);
 
   if (err instanceof APIError) {
-    if (err.template !== '') {
-      return res.status(err.status).render(err.template, err.options);
-    }
-
-    return res
-      .status(err.status)
-      .json({ status: err.message, error: err.errors });
+    return res.status(err.status).json({
+      status: 'fail',
+      code: err.code,
+      message: err.message,
+      errors: err.errors
+    });
   }
 
   if (err instanceof AdminAPIError) {
@@ -24,14 +23,19 @@ function handleError(err, req, res, next) {
   }
 
   if (err instanceof ExchangeRateError) {
-    return res
-      .status(503)
-      .json({ status: 'fail', error: 'Exchange rate temporarily unavailable' });
+    return res.status(503).json({
+      status: 'fail',
+      code: 'EXCHANGE_RATE_UNAVAILABLE',
+      message: 'Exchange rate temporarily unavailable'
+    });
   }
 
-  return res
-    .status(500)
-    .json({ status: 'fail', error: err?.message || 'Server error' });
+  // Never echo an unexpected error's message: it can carry SQL or file paths
+  return res.status(500).json({
+    status: 'fail',
+    code: 'SERVER_ERROR',
+    message: 'Server error'
+  });
 }
 
 module.exports = {
