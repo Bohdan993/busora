@@ -12,3 +12,6 @@ documentation
 assets/tickets/*.pdf
 .vscode
 .idea
+coverage
+integration
+**/*.test.js

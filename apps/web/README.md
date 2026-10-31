@@ -49,6 +49,14 @@ carry a `code` that maps to the messages under `errors` in `messages/*.json`.
   the local stack (run locally only; it books real seats in the dev database —
   re-seed the flights to reset them). The API allows 100 requests per IP every
   15 minutes (`RATE_LIMIT_MAX_REQUESTS`), so back-to-back runs can hit it.
+  `E2E_BASE_URL=https://demo.localhost npm run test:e2e` runs the same tests
+  against a running site instead, such as the local demo rehearsal.
+
+## Docker image
+
+The `Dockerfile` builds the Next.js standalone server (`NEXT_OUTPUT=standalone`
+is set only there). The demo runs it behind Caddy; see
+[infra/DEMO.md](../../infra/DEMO.md).
 
 ## Content
 

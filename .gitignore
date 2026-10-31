@@ -9,6 +9,9 @@ coverage/
 .env.*
 !.env.example
 !.env.*.example
+# The demo server settings (infra/demo.env.example is the template)
+*.env
+!*.env.example
 
 # Local certificates
 *.pem
