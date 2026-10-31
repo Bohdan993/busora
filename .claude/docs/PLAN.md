@@ -42,6 +42,16 @@ We are building an educational bus-ticket booking project from the Busreisen / "
 
 ---
 
+## Progress (2026-10-31)
+- Phases 0–8 are done. See `.claude/changelog/daily.md` for what each one changed.
+- Where the work departed from the text below:
+  - The mock payment endpoint is `POST /api/payment/mock/complete`.
+  - Line 1 serves Ostrava – Olomouc – Hradec Králové – Praha.
+  - The HTTP tests use `fetch`, not `supertest`.
+  - Generating the API types moved to Phase 9.
+- **Next:** Phase 9 (scope revised below). Phase 10 waits for the design
+  reference.
+
 ## Target layout (one monorepo, new repo)
 ```
 <project>/
@@ -175,21 +185,77 @@ The project name and brand are still open. They are only needed by Phase 5.
 **Check:** log in as the demo admin, create a flight with a discount, see a booking made through the web app, and download its PDF.
 
 ## Phase 9 — Next.js frontend: working version (before the reference design)
-1. **Stack:**
+Scope agreed on 2026-10-31. The site's **page and section structure follows
+busreisen.com.ua** (the real carrier this project forked from), **structure
+only**: every text, contact detail and photo is our own and fictional, in
+uk/cs/en. The visual design still comes from the reference provided in Phase 10.
+
+1. **API additions (backend, with OpenAPI schemas and tests):**
+   - `GET /api/network?languageCode=`: lines → directions → stops (city, place,
+     time), the operating weekdays derived from the actual flights, and the
+     fares for every city pair in UAH and CZK. One small, cacheable response
+     that the routes, schedule, fares and popular-destination views are all
+     built from, so nothing is duplicated in the frontend.
+   - `GET /api/discounts?languageCode=`: public discount names, groups,
+     percentages and age limits (for the fares page).
+   - **Seed change:** flights run on set weekdays instead of daily, so the
+     schedule, routes and booking calendar show real gaps. For example, line 1
+     leaves Ukraine Tue/Thu/Sat and Czechia Wed/Fri/Sun, and line 2 runs on
+     other days.
+2. **Stack:**
    - `apps/web`: Next.js App Router + TypeScript.
    - `next-intl` with `/[locale]` routes for uk, cs and en.
-   - TanStack Query for data; react-hook-form + zod for forms (phone rules mirror `market.js`).
-   - The generated OpenAPI types and a typed API client in `src/lib/api/`.
-2. **Pages** (deliberately unstyled; layout comes in Phase 10):
-   - `/` search: origin and destination, dates (one-way / return / open date), passengers.
-   - `/search` results, with alternative dates and an availability calendar.
-   - `/booking/passengers`: one form per passenger, discount picker, and the bus-flight-discount warning.
-   - `/booking/review`: summary from `GET /current-data`.
-   - `/checkout/mock/[orderId]`: the fake payment page with Pay and Decline buttons.
-   - `/booking/success`: ticket number and PDF / ZIP download; `/booking/failed`.
-   - Static pages: about, terms, privacy. All carry the educational-demo notice.
-3. Show session expiry (15-minute TTL) and offer to restart the search.
-4. **E2E test:** a Playwright test of the full happy path in uk and in cs, run against the compose stack.
+   - Next.js rewrites send `/api/*` to the API, so the session cookie is
+     same-origin.
+   - TanStack Query for data; react-hook-form + zod for forms (phone rules
+     mirror `market.js`).
+   - Types generated from `apps/api/openapi.json`, plus a typed client in
+     `src/lib/api/`. API error `code`s map to translated messages.
+3. **Site pages** (deliberately unstyled; the look comes in Phase 10):
+   - **Header:** Home, Routes, Schedule, Fares, Rules, Contacts, and a
+     uk/cs/en switch. Every page shows the "educational demo, not a real
+     carrier" banner. **Footer:** navigation, contacts and the public-offer
+     (rules) link. No newsletter.
+   - **Home**, in this order:
+     1. Hero: headline, intro, phones, and the booking form (from/to grouped
+        by country, one-way/return/open date with a bookable-dates calendar,
+        passengers).
+     2. Our advantages: amenity tiles.
+     3. Our fleet: bus cards with photo, model, year, Euro class, seats and
+        amenities.
+     4. Popular destinations: city-pair cards with duration, price "from" and
+        a photo. The pairs are chosen in web config; prices and durations come
+        from `/api/network`.
+     5. About the company, with "read more": why choose us, how to book,
+        border-crossing tips, about Czechia.
+     - No reviews section.
+   - **`/routes`:** a table of city pairs with one-way/round-trip price and
+     operating days from each side. Filters for departure city, arrival city
+     and weekday. A row opens the search with the pair filled in.
+   - **`/schedule`:** a line selector, then one table per direction: city,
+     stop, departure days/time, arrival days/time, and a border-delay note.
+   - **`/fares`:** a line selector, then a price grid per direction
+     (destinations × origins, one-way/round trip) in the origin country's
+     currency (UAH from Ukraine, CZK from Czechia), then the discounts table.
+   - **`/rules`:** a table of contents plus numbered sections (general,
+     carrier duties, passenger duties, passenger rights, prohibited, tickets,
+     refunds with a fee table). The refund and baggage terms match the terms
+     printed on the PDF tickets.
+   - **`/contacts`:** cards for fictional UA (+380) and CZ (+420) phones with
+     live Kyiv/Prague clocks, and the office with hours and an open/closed
+     indicator. No bank details.
+   - **Attributions:** the photo credits page.
+4. **Booking flow:** search results with the nearest-date alternatives and
+   choosing the return leg, passengers (one form per passenger, discount
+   picker, promo-flight warning), review, the mock payment page (Pay /
+   Decline), success (summary + PDF/ZIP download), and failed. A session
+   countdown (15 min) offers to restart the search.
+5. **Images:** free-licensed photos of the buses and cities (Wikimedia
+   Commons / Unsplash), credited on the attributions page.
+6. **Checks:**
+   - A Playwright E2E of the full booking in uk and cs, run **locally only**
+     against the compose stack (decided 2026-10-31: not in CI).
+   - CI gets a `web` job: lint, typecheck and build.
 
 ## Phase 10 — Apply the reference design (after the user provides it)
 1. Pull the design tokens (colours, type, spacing, breakpoints) into a theme, then build the shared components (search form, flight card, calendar, passenger form, stepper).
