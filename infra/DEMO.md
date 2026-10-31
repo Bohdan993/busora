@@ -56,8 +56,12 @@ network.
    `docker login ghcr.io -u <github-user>`.
 6. GitHub settings, on the repository:
    - Environment `demo` (optionally with required reviewers).
-   - Variables: `DEMO_HOST`, `DEMO_USER`, optionally `DEMO_DIR` (default
-     `/opt/busora`) and `DEMO_PLATFORMS` (e.g. `linux/arm64` for an ARM server).
+   - Repository variables (not environment ones: the deploy job checks
+     `DEMO_HOST` before it enters the environment): `DEMO_USER`, optionally
+     `DEMO_DIR` (default `/opt/busora`) and `DEMO_PLATFORMS`. `linux/arm64`
+     alone builds on GitHub's native ARM runner (free for public repositories);
+     the default `linux/amd64,linux/arm64` emulates ARM on x86, which is much
+     slower. Add `DEMO_HOST` last: it switches deploys on.
    - Secrets: `DEMO_SSH_KEY` (a private key for the deploy user, made only for
      this) and `DEMO_SSH_KNOWN_HOSTS` (the output of `ssh-keyscan <host>`, so
      the workflow refuses an unexpected server).
