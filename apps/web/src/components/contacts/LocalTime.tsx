@@ -1,5 +1,6 @@
 'use client';
 
+import { Clock } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { OFFICE } from '@/content/company';
 import { useNow } from '@/lib/useNow';
@@ -17,7 +18,14 @@ export function LocalTime({ timeZone }: { timeZone: string }) {
     hour: '2-digit',
     minute: '2-digit'
   }).format(now);
-  return <p className="muted">{t('localTime', { time })}</p>;
+  return (
+    <p>
+      <span className="badge">
+        <Clock size={14} aria-hidden="true" />
+        {t('localTime', { time })}
+      </span>
+    </p>
+  );
 }
 
 /** Weekday and hour in the office's time zone. */
@@ -48,5 +56,12 @@ export function OfficeStatus() {
   const t = useTranslations('contactsPage');
   const now = useNow(MINUTE);
   if (now === null) return null;
-  return <p>{isOfficeOpen(new Date(now)) ? t('open') : t('closed')}</p>;
+  const open = isOfficeOpen(new Date(now));
+  return (
+    <p>
+      <span className={`badge${open ? ' badge-positive' : ''}`}>
+        {open ? t('open') : t('closed')}
+      </span>
+    </p>
+  );
 }

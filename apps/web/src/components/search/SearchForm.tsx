@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState, type FormEvent } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { SearchQuery } from '@/lib/api/booking';
 import {
@@ -18,6 +19,7 @@ import {
 import { formatDate } from '@/lib/format';
 import { currencyOf, destinationsFrom, type Network } from '@/lib/network';
 import { useRouter } from '@/i18n/navigation';
+import styles from './SearchForm.module.css';
 
 const TRIP_TYPES: TripType[] = ['oneWay', 'round', 'openDate'];
 const TRIP_LABEL = {
@@ -93,12 +95,20 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
     'backwards'
   );
 
-  if (network.isPending) return <p>{t('common.loading')}</p>;
+  if (network.isPending) {
+    return (
+      <div className={`${styles.form} ${styles.placeholder}`}>
+        <p>{t('common.loading')}</p>
+      </div>
+    );
+  }
   if (network.isError) {
     return (
-      <p role="alert" className="error">
-        {errorMessage(network.error)}
-      </p>
+      <div className={styles.form}>
+        <p role="alert" className="error">
+          {errorMessage(network.error)}
+        </p>
+      </div>
     );
   }
 
@@ -136,12 +146,33 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
   }
 
   return (
-    <form onSubmit={submit} aria-labelledby={`${id}-title`} className="card">
-      <h2 id={`${id}-title`}>{t('search.title')}</h2>
-      <div className="form-row">
-        <label>
-          {t('search.from')}
-          <br />
+    <form
+      onSubmit={submit}
+      aria-labelledby={`${id}-title`}
+      className={styles.form}
+    >
+      <div className={styles.top}>
+        <h2 id={`${id}-title`}>{t('search.title')}</h2>
+        <fieldset className="segmented">
+          <legend className="visually-hidden">{t('search.tripType')}</legend>
+          {TRIP_TYPES.map((type) => (
+            <label key={type}>
+              <input
+                type="radio"
+                name={`${id}-trip`}
+                value={type}
+                checked={tripType === type}
+                onChange={() => setTripType(type)}
+              />
+              {t(`common.${TRIP_LABEL[type]}`)}
+            </label>
+          ))}
+        </fieldset>
+      </div>
+
+      <div className={styles.fields}>
+        <label className="field">
+          <span className="field-label">{t('search.from')}</span>
           <select
             required
             value={originId ?? ''}
@@ -154,9 +185,8 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
             <CityOptions cities={origins} />
           </select>
         </label>
-        <label>
-          {t('search.to')}
-          <br />
+        <label className="field">
+          <span className="field-label">{t('search.to')}</span>
           <select
             required
             disabled={!originId}
@@ -173,31 +203,8 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
             <CityOptions cities={destinations} />
           </select>
         </label>
-      </div>
-
-      <fieldset>
-        <legend>{t('search.tripType')}</legend>
-        {TRIP_TYPES.map((type) => (
-          <label
-            key={type}
-            style={{ display: 'inline-block', marginRight: '1rem' }}
-          >
-            <input
-              type="radio"
-              name={`${id}-trip`}
-              value={type}
-              checked={tripType === type}
-              onChange={() => setTripType(type)}
-            />{' '}
-            {t(`common.${TRIP_LABEL[type]}`)}
-          </label>
-        ))}
-      </fieldset>
-
-      <div className="form-row">
-        <label>
-          {t('search.departure')}
-          <br />
+        <label className="field">
+          <span className="field-label">{t('search.departure')}</span>
           <select
             required
             disabled={!destinationId || departures.isPending}
@@ -209,9 +216,8 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
           </select>
         </label>
         {tripType === 'round' && (
-          <label>
-            {t('search.return')}
-            <br />
+          <label className="field">
+            <span className="field-label">{t('search.return')}</span>
             <select
               required
               disabled={!departure || returns.isPending}
@@ -223,9 +229,11 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
             </select>
           </label>
         )}
-        <label>
-          {t('search.adults')}
-          <br />
+      </div>
+
+      <div className={styles.bottom}>
+        <label className={`field ${styles.count}`}>
+          <span className="field-label">{t('search.adults')}</span>
           <select
             value={adults}
             onChange={(e) => setAdults(Number(e.target.value))}
@@ -239,9 +247,8 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
             )}
           </select>
         </label>
-        <label>
-          {t('search.children')}
-          <br />
+        <label className={`field ${styles.count}`}>
+          <span className="field-label">{t('search.children')}</span>
           <select
             value={children}
             onChange={(e) => setChildren(Number(e.target.value))}
@@ -253,16 +260,18 @@ export function SearchForm({ initial }: { initial?: Partial<SearchQuery> }) {
             ))}
           </select>
         </label>
-      </div>
-
-      {destinationId && departures.isSuccess && departureDates.length === 0 && (
-        <p className="muted">{t('search.noDates')}</p>
-      )}
-      <p>
-        <button type="submit" disabled={!canSubmit}>
+        {destinationId &&
+          departures.isSuccess &&
+          departureDates.length === 0 && (
+            <p className={`muted ${styles.note}`}>{t('search.noDates')}</p>
+          )}
+        <button type="submit" disabled={!canSubmit} className={styles.submit}>
           {t('search.submit')}
+          <span className="button-arrow" aria-hidden="true">
+            <ArrowRight size={18} strokeWidth={2.25} />
+          </span>
         </button>
-      </p>
+      </div>
     </form>
   );
 }

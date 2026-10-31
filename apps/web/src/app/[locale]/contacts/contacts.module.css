@@ -1,0 +1,59 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  align-items: flex-start;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: var(--text-subheading);
+  letter-spacing: var(--tracking-subheading);
+}
+
+.card p {
+  margin: 0;
+}
+
+.phones {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phones a {
+  display: inline-flex;
+  gap: var(--space-8);
+  align-items: center;
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.phones a:hover {
+  color: var(--color-action-strong);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.details dt {
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+}
+
+.details dd {
+  margin: 0 0 var(--space-8);
+}
+
+.cards {
+  display: grid;
+  gap: var(--space-20);
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+}

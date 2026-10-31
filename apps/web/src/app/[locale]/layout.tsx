@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { Inter } from 'next/font/google';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -8,6 +9,13 @@ import { SiteHeader } from '@/components/layout/SiteHeader';
 import { routing } from '@/i18n/routing';
 import { Providers } from './providers';
 import '../globals.css';
+
+// Cyrillic for Ukrainian, Latin Extended for Czech diacritics
+const inter = Inter({
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
+  variable: '--font-inter',
+  display: 'swap'
+});
 
 type Props = {
   children: ReactNode;
@@ -35,16 +43,13 @@ export default async function LocaleLayout({ children, params }: Props) {
   const t = await getTranslations('common');
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={inter.variable}>
       <body>
         <NextIntlClientProvider>
           <Providers>
             <a href="#main" className="skip-link">
               {t('skipToContent')}
             </a>
-            <p className="demo-banner" role="note">
-              {t('demoBanner')}
-            </p>
             <SiteHeader />
             <main id="main">{children}</main>
             <SiteFooter />

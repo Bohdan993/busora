@@ -91,10 +91,9 @@ export function RoutesTable() {
 
   return (
     <>
-      <div className="form-row" role="search">
-        <label>
-          {t('routesPage.filterFrom')}
-          <br />
+      <div className="toolbar" role="search">
+        <label className="field">
+          <span className="field-label">{t('routesPage.filterFrom')}</span>
           <select
             value={fromId}
             onChange={(e) => setFromId(Number(e.target.value))}
@@ -107,9 +106,8 @@ export function RoutesTable() {
             ))}
           </select>
         </label>
-        <label>
-          {t('routesPage.filterTo')}
-          <br />
+        <label className="field">
+          <span className="field-label">{t('routesPage.filterTo')}</span>
           <select
             value={toCityId}
             onChange={(e) => setToCityId(Number(e.target.value))}
@@ -122,9 +120,8 @@ export function RoutesTable() {
             ))}
           </select>
         </label>
-        <label>
-          {t('routesPage.filterDay')}
-          <br />
+        <label className="field">
+          <span className="field-label">{t('routesPage.filterDay')}</span>
           <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
             <option value={-1}>{t('routesPage.anyDay')}</option>
             {WEEK_ORDER.map((d) => (
@@ -136,6 +133,7 @@ export function RoutesTable() {
         </label>
         <button
           type="button"
+          className="button-outline"
           onClick={() => {
             setFromId(0);
             setToCityId(0);
@@ -187,7 +185,10 @@ export function RoutesTable() {
                     <Weekdays days={row.daysFromCz} />
                   </td>
                   <td>
-                    <Link href={`/?from=${from}&to=${to}#search`}>
+                    <Link
+                      href={`/?from=${from}&to=${to}#search`}
+                      className="button button-small"
+                    >
                       {t('routesPage.book')}
                     </Link>
                   </td>
@@ -201,7 +202,7 @@ export function RoutesTable() {
 
       <section className="section">
         <h2>{t('routesPage.alsoTitle')}</h2>
-        <ul className="grid">
+        <ul className="chips">
           {cityOptions.map((city) => {
             const other = data.cities.find(
               (c) => c.country.id !== city.country.id
@@ -210,6 +211,7 @@ export function RoutesTable() {
               <li key={city.id}>
                 <Link
                   href={`/routes?from=${city.id}`}
+                  className="button button-outline button-small"
                   onClick={() => setFromId(city.id)}
                 >
                   {t('routesPage.toCountry', {

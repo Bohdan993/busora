@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { Network } from '@/lib/network';
+import styles from './network.module.css';
 
 /** Picks one line of the network (by its outbound direction's name). */
 export function LinePicker({
@@ -15,9 +16,8 @@ export function LinePicker({
 }) {
   const t = useTranslations();
   return (
-    <label>
-      {t('schedulePage.line')}
-      <br />
+    <label className={`field ${styles.picker}`}>
+      <span className="field-label">{t('schedulePage.line')}</span>
       <select value={value} onChange={(e) => onChange(Number(e.target.value))}>
         {network.lines.map((line, index) => (
           <option key={line.id} value={line.id}>

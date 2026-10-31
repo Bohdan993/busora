@@ -22,13 +22,15 @@ export default async function Page({ params }: Props) {
 
   return (
     <>
-      <h1>{t('routesPage.title')}</h1>
-      <p>{t('routesPage.intro')}</p>
+      <div className="page-head">
+        <h1>{t('routesPage.title')}</h1>
+        <p className="lead muted">{t('routesPage.intro')}</p>
+      </div>
       {/* Filters start from the query string, known only at request time */}
       <Suspense fallback={<p>{t('common.loading')}</p>}>
         <RoutesTable />
       </Suspense>
-      <section className="section">
+      <section className="section prose">
         <h2>{t('routesPage.infoTitle')}</h2>
         {(t.raw('routesPage.info') as string[]).map((text) => (
           <p key={text}>{text}</p>

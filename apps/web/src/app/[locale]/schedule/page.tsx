@@ -21,7 +21,9 @@ export default async function Page({ params }: Props) {
 
   return (
     <>
-      <h1>{t('schedulePage.title')}</h1>
+      <div className="page-head">
+        <h1>{t('schedulePage.title')}</h1>
+      </div>
       <ScheduleTables />
     </>
   );

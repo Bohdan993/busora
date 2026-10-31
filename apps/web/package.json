@@ -17,6 +17,7 @@
   "dependencies": {
     "@hookform/resolvers": "^7.0.0",
     "@tanstack/react-query": "^5.105.0",
+    "lucide-react": "^1.66.0",
     "next": "16.4.3",
     "next-intl": "^4.14.9",
     "openapi-fetch": "^0.17.0",

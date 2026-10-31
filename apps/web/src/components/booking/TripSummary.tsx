@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useBooking } from '@/lib/booking/storage';
 import { formatDate } from '@/lib/format';
+import styles from './booking.module.css';
 
 /** The selected trip, as remembered from the results page. */
 export function TripSummary() {
@@ -20,17 +21,17 @@ export function TripSummary() {
   const hasReturn = /^\d{4}-/.test(offer.dates.returnPure ?? '');
 
   return (
-    <section className="card">
+    <section className={`card card-muted ${styles.summary}`}>
       <h2>
         {offer.cities.from.name} → {offer.cities.to.name}
       </h2>
       <p>
-        {t('outbound')}: {date(offer.dates.departurePure)},{' '}
+        <strong>{t('outbound')}:</strong> {date(offer.dates.departurePure)},{' '}
         {offer.places.from.onBoardingTime} {offer.places.from.onBoardingPlace}
       </p>
       {hasReturn && (
         <p>
-          {t('return')}: {date(offer.dates.returnPure!)},{' '}
+          <strong>{t('return')}:</strong> {date(offer.dates.returnPure!)},{' '}
           {offer.places.to.onBoardingTime} {offer.places.to.onBoardingPlace}
         </p>
       )}

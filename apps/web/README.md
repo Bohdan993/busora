@@ -5,8 +5,22 @@ plus the booking flow from search to ticket. Next.js (App Router, Cache
 Components) with TypeScript, `next-intl` (uk, cs, en at `/uk`, `/cs`, `/en`),
 TanStack Query and react-hook-form + zod.
 
-The layout is deliberately plain for now; the visual design is applied in
-Phase 10.
+## Styling
+
+Plain CSS, no framework. The look follows a style reference (white canvas,
+pill-shaped controls, Inter with tight headline tracking, one soft shadow),
+with Busora's own blue as the action colour and its green for positive states.
+
+- `src/styles/tokens.css`: colours, type scale, spacing, radii, shadow. The
+  comment at the top lists where the site departs from the reference, and why.
+- `src/app/globals.css`: base styles and the shared primitives (`button`,
+  `.button-outline`, `.card`, `.badge`, `.field`, `.segmented`, tables).
+- `*.module.css` next to a component: that component's own layout.
+- Icons: `lucide-react`. Font: Inter through `next/font` (self-hosted at build
+  time, with the Cyrillic and Latin Extended subsets).
+
+Text colours keep WCAG AA contrast (4.5:1). Brand green is too light for text,
+so text uses the darker `--color-positive-text`.
 
 ## How it talks to the API
 
@@ -33,7 +47,8 @@ carry a `code` that maps to the messages under `errors` in `messages/*.json`.
 - `npm run build`
 - `npm run test:e2e`: Playwright books through the site in uk and cs against
   the local stack (run locally only; it books real seats in the dev database —
-  re-seed the flights to reset them)
+  re-seed the flights to reset them). The API allows 100 requests per IP every
+  15 minutes (`RATE_LIMIT_MAX_REQUESTS`), so back-to-back runs can hit it.
 
 ## Content
 

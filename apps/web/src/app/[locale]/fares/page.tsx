@@ -21,8 +21,10 @@ export default async function Page({ params }: Props) {
 
   return (
     <>
-      <h1>{t('faresPage.title')}</h1>
-      <p>{t('faresPage.intro')}</p>
+      <div className="page-head">
+        <h1>{t('faresPage.title')}</h1>
+        <p className="lead muted">{t('faresPage.intro')}</p>
+      </div>
       <FaresTables />
     </>
   );

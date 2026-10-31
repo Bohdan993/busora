@@ -26,7 +26,8 @@
       "uk": "Українська",
       "cs": "Čeština",
       "en": "English"
-    }
+    },
+    "demoBadge": "Demo"
   },
   "nav": {
     "home": "Úvod",
@@ -35,7 +36,8 @@
     "fares": "Ceník",
     "rules": "Přepravní řád",
     "contacts": "Kontakty",
-    "menu": "Hlavní navigace"
+    "menu": "Hlavní navigace",
+    "book": "Koupit jízdenku"
   },
   "footer": {
     "navigation": "Navigace",
@@ -115,7 +117,8 @@
     "passengers": "Cestující",
     "review": "Kontrola",
     "payment": "Platba",
-    "done": "Jízdenka"
+    "done": "Jízdenka",
+    "completed": "dokončeno"
   },
   "passengers": {
     "title": "Údaje cestujících",
@@ -186,6 +189,7 @@
   },
   "home": {
     "hero": {
+      "badge": "Ukrajina ⇄ Česko",
       "title": "Autobusy mezi Ukrajinou a Českou republikou",
       "text": "Pohodlné autobusy z Kyjeva, Lvova a západní Ukrajiny do Prahy, Brna, Ostravy a Plzně — a zpět. Rezervace online za pár minut.",
       "phones": "Zavolejte nám"

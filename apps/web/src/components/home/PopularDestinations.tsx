@@ -14,6 +14,7 @@ import {
   findFare,
   tripMinutes
 } from '@/lib/network';
+import styles from './home.module.css';
 
 export function PopularDestinations() {
   const t = useTranslations();
@@ -24,7 +25,9 @@ export function PopularDestinations() {
 
   return (
     <section className="section" aria-labelledby="popular-title">
-      <h2 id="popular-title">{t('home.popular.title')}</h2>
+      <div className="section-head">
+        <h2 id="popular-title">{t('home.popular.title')}</h2>
+      </div>
       {network.isPending && <p>{t('common.loading')}</p>}
       {network.isError && (
         <p role="alert" className="error">
@@ -45,34 +48,42 @@ export function PopularDestinations() {
               .name;
             const pair = `from=${fromCityId}&to=${toCityId}`;
             return (
-              <li key={pair} className="card">
-                <Image
-                  src={image}
-                  alt=""
-                  width={640}
-                  height={427}
-                  sizes="(max-width: 640px) 100vw, 320px"
-                />
-                <h3>
-                  {cityName(data, fromCityId)} → {cityName(data, toCityId)}
-                </h3>
-                <p className="muted">
-                  {country} · {durationText(minutes)}
-                </p>
-                <p>
-                  <strong>
-                    {t('common.priceFrom', {
-                      price: formatMoney(fare.oneWay, currency, locale)
-                    })}
-                  </strong>
-                </p>
-                <p>
-                  <Link href={`/routes?${pair}`}>{t('home.popular.more')}</Link>
-                  {' · '}
-                  <Link href={`/?${pair}#search`}>
-                    {t('home.popular.book')}
-                  </Link>
-                </p>
+              <li key={pair} className={styles.mediaCard}>
+                <div className={styles.media}>
+                  <Image
+                    src={image}
+                    alt=""
+                    width={640}
+                    height={427}
+                    sizes="(max-width: 640px) 100vw, 320px"
+                  />
+                </div>
+                <div className={styles.body}>
+                  <h3>
+                    {cityName(data, fromCityId)} → {cityName(data, toCityId)}
+                  </h3>
+                  <p className="muted">
+                    {country} · {durationText(minutes)}
+                  </p>
+                  <p>
+                    <Link href={`/routes?${pair}`}>
+                      {t('home.popular.more')}
+                    </Link>
+                  </p>
+                  <div className={styles.footer}>
+                    <span className={styles.price}>
+                      {t('common.priceFrom', {
+                        price: formatMoney(fare.oneWay, currency, locale)
+                      })}
+                    </span>
+                    <Link
+                      href={`/?${pair}#search`}
+                      className="button button-small"
+                    >
+                      {t('home.popular.book')}
+                    </Link>
+                  </div>
+                </div>
               </li>
             );
           })}

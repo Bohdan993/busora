@@ -1,0 +1,407 @@
+/* ---------- Page head of every booking step ---------- */
+
+.head {
+  padding-top: var(--space-28);
+  margin-bottom: var(--space-28);
+}
+
+.head h1 {
+  margin-bottom: var(--space-8);
+}
+
+.headMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-16);
+  align-items: center;
+}
+
+.headMeta p {
+  margin: 0;
+}
+
+/* ---------- Steps ---------- */
+
+.steps {
+  padding-top: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+}
+
+.steps ol {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: flex;
+  flex: 1 1 0;
+  gap: var(--space-8);
+  align-items: center;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  font-weight: 500;
+}
+
+.steps li:last-child {
+  flex: 0 0 auto;
+}
+
+.steps li:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  min-width: var(--space-12);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-fog);
+}
+
+.mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--color-mist);
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.steps li[data-state='current'] {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.steps li[data-state='current'] .mark {
+  background: var(--color-action);
+  color: var(--color-white);
+}
+
+.steps li[data-state='done'] {
+  color: var(--color-ink);
+}
+
+.steps li[data-state='done'] .mark {
+  background: var(--color-positive);
+  color: var(--color-white);
+}
+
+.steps li[data-state='done']::after {
+  background: var(--color-positive);
+}
+
+/* On phones only the current step keeps its visible name */
+@media (max-width: 40rem) {
+  .steps li[data-state='current'] {
+    flex: 1 0 auto;
+  }
+
+  .steps li:not([data-state='current']) .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+}
+
+/* ---------- Session timer ---------- */
+
+.timer {
+  margin: 0;
+}
+
+/* ---------- Offer card ---------- */
+
+.offer {
+  display: grid;
+  gap: var(--space-20) var(--space-28);
+  padding: var(--card-padding);
+  border: 1px solid var(--color-fog);
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  transition: box-shadow 0.15s ease;
+}
+
+.offer:hover {
+  box-shadow: var(--shadow-soft);
+}
+
+.offer + .offer {
+  margin-top: var(--element-gap);
+}
+
+.legs {
+  display: grid;
+  gap: var(--space-20);
+}
+
+.leg + .leg {
+  padding-top: var(--space-20);
+  border-top: 1px dashed var(--color-fog);
+}
+
+.legTitle {
+  margin-bottom: var(--space-12);
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: var(--tracking-body);
+}
+
+.times {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: 1fr minmax(1.5rem, 5rem) 1fr;
+  margin: 0 0 var(--space-8);
+}
+
+/* The line between departure and arrival */
+.times::before {
+  content: '';
+  grid-row: 1;
+  grid-column: 2;
+  align-self: start;
+  height: 2px;
+  margin-top: 2.6rem;
+  border-radius: 1px;
+  background: var(--color-fog);
+}
+
+.times > div:last-child {
+  grid-column: 3;
+}
+
+.times dt {
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+}
+
+.times dd {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.time {
+  font-size: var(--text-heading-sm);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: var(--tracking-heading);
+}
+
+.place {
+  font-size: var(--text-caption);
+}
+
+.routeName {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+}
+
+.buy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  justify-content: center;
+  padding-top: var(--space-20);
+  border-top: 1px solid var(--color-fog);
+}
+
+.buy p {
+  margin: 0;
+}
+
+.promo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.price {
+  font-size: var(--text-heading-sm);
+  font-weight: 700;
+  letter-spacing: var(--tracking-heading);
+}
+
+@media (min-width: 48rem) {
+  .offer {
+    grid-template-columns: 1fr 15rem;
+  }
+
+  .buy {
+    padding-top: 0;
+    padding-left: var(--space-28);
+    border-top: 0;
+    border-left: 1px solid var(--color-fog);
+  }
+}
+
+/* ---------- Results ---------- */
+
+.day {
+  margin-top: var(--space-28);
+}
+
+.day h3 {
+  margin-bottom: var(--space-12);
+}
+
+/* ---------- Trip summary ---------- */
+
+.summary {
+  margin-bottom: var(--space-28);
+}
+
+.summary h2 {
+  margin-bottom: var(--space-8);
+  font-size: var(--text-subheading);
+  letter-spacing: var(--tracking-subheading);
+}
+
+.summary p {
+  margin: 0;
+}
+
+/* ---------- Passengers ---------- */
+
+.passenger {
+  margin-bottom: var(--space-20);
+  padding: var(--card-padding);
+  border: 1px solid var(--color-fog);
+  border-radius: var(--radius-card);
+}
+
+/* Floated, so the legend sits inside the rounded box */
+.passenger legend {
+  float: left;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-12);
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: var(--space-20);
+  font-size: var(--text-subheading);
+  font-weight: 600;
+  letter-spacing: var(--tracking-subheading);
+}
+
+.passenger legend + * {
+  clear: both;
+}
+
+.passengerRows {
+  display: grid;
+  gap: var(--space-16);
+}
+
+.legendPrice {
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  letter-spacing: var(--tracking-body);
+}
+
+/* ---------- Total bar ---------- */
+
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-16) var(--space-28);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-20);
+  padding: var(--space-20) var(--card-padding);
+  border-radius: var(--radius-card);
+  background: var(--color-mist);
+}
+
+.total p {
+  margin: 0;
+}
+
+.totalAmount {
+  display: block;
+  font-size: var(--text-heading);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-heading);
+}
+
+/* ---------- Payment, success, failure ---------- */
+
+.centered {
+  max-width: 34rem;
+  margin: var(--space-40) auto 0;
+  text-align: center;
+}
+
+.statusIcon {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 auto var(--space-20);
+  border-radius: 50%;
+}
+
+.statusPositive {
+  background: var(--color-positive-soft);
+  color: var(--color-positive-text);
+}
+
+.statusAction {
+  background: var(--color-action-soft);
+  color: var(--color-action-strong);
+}
+
+.afterActions {
+  margin: var(--space-20) 0 0;
+}
+
+.statusNegative {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.amount {
+  margin: var(--space-8) 0 var(--space-28);
+  font-size: var(--text-heading-lg);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-heading);
+}
+
+.ticket {
+  display: grid;
+  gap: var(--space-12) var(--space-20);
+  grid-template-columns: auto 1fr;
+  margin: var(--space-28) 0;
+  text-align: left;
+}
+
+.ticket dt {
+  color: var(--color-muted);
+}
+
+.ticket dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ticket ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

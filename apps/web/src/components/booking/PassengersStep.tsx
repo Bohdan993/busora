@@ -34,6 +34,7 @@ import { formatMoney } from '@/lib/format';
 import { BookingSteps } from './BookingSteps';
 import { SessionTimer } from './SessionTimer';
 import { TripSummary } from './TripSummary';
+import styles from './booking.module.css';
 
 // Mirror the API's rules (config/market.js and passengerService) so most
 // mistakes are caught before a round trip; the API still has the last word.
@@ -115,10 +116,12 @@ export function PassengersStep() {
   });
 
   return (
-    <>
+    <div className="narrow">
       <BookingSteps current="passengers" />
-      <h1>{t('passengers.title')}</h1>
-      <SessionTimer />
+      <div className={styles.head}>
+        <h1>{t('passengers.title')}</h1>
+        <SessionTimer />
+      </div>
       <TripSummary />
       {form.isPending && <p>{t('common.loading')}</p>}
       {form.isError && (
@@ -128,12 +131,13 @@ export function PassengersStep() {
         </p>
       )}
       {form.isSuccess && <PassengersForm data={form.data} />}
-    </>
+    </div>
   );
 }
 
 function PassengersForm({ data }: { data: PassengerForm }) {
   const t = useTranslations('passengers');
+  const tReview = useTranslations('review');
   const locale = useLocale();
   const router = useRouter();
   const languageCode = useApiLanguage();
@@ -195,7 +199,7 @@ function PassengersForm({ data }: { data: PassengerForm }) {
   return (
     <form noValidate onSubmit={handleSubmit((values) => submit.mutate(values))}>
       <p className="muted">{t('passportNote')}</p>
-      {!data.showDiscounts && <p>{t('promoNote')}</p>}
+      {!data.showDiscounts && <p className="notice">{t('promoNote')}</p>}
       {(passengers ?? []).map((p, index) => (
         <PassengerFieldset
           key={index}
@@ -213,9 +217,6 @@ function PassengersForm({ data }: { data: PassengerForm }) {
           price={money(price(p.discountId))}
         />
       ))}
-      <p>
-        <strong>{money(total)}</strong>
-      </p>
       {submit.isError &&
         !(
           submit.error instanceof ApiError &&
@@ -230,9 +231,15 @@ function PassengersForm({ data }: { data: PassengerForm }) {
           {errorMessage(new ApiError('VALIDATION_FAILED', 422, ''))}
         </p>
       )}
-      <button type="submit" disabled={isSubmitting || submit.isPending}>
-        {t('submit')}
-      </button>
+      <div className={styles.total}>
+        <p>
+          <span className="muted">{tReview('total')}</span>
+          <strong className={styles.totalAmount}>{money(total)}</strong>
+        </p>
+        <button type="submit" disabled={isSubmitting || submit.isPending}>
+          {t('submit')}
+        </button>
+      </div>
     </form>
   );
 }
@@ -279,9 +286,10 @@ function PassengerFieldset({
   ) => {
     const error = errors?.[name]?.message;
     return (
-      <label htmlFor={id(name)}>
-        {label}
-        <br />
+      <div className="field">
+        <label htmlFor={id(name)} className="field-label">
+          {label}
+        </label>
         <input
           id={id(name)}
           type={props.type ?? 'text'}
@@ -296,82 +304,89 @@ function PassengerFieldset({
           {...register(field(name))}
         />
         {props.hint && (
-          <span id={id(`${name}-hint`)} className="muted">
-            <br />
+          <span id={id(`${name}-hint`)} className="field-hint">
             {props.hint}
           </span>
         )}
         {error && (
           <span id={id(`${name}-error`)} className="field-error" role="alert">
-            <br />
             {error}
           </span>
         )}
-      </label>
+      </div>
     );
   };
 
   const available = groups.length ? discountGroupsFor(kind, groups) : [];
 
   return (
-    <fieldset>
+    <fieldset className={styles.passenger}>
       <legend>
-        {title} — {t('pricePerPassenger', { price })}
+        <span>{title}</span>
+        <span className={styles.legendPrice}>
+          <span className="visually-hidden"> — </span>
+          {t('pricePerPassenger', { price })}
+        </span>
       </legend>
-      <div className="form-row">
-        {input('name', t('firstName'), {
-          autoComplete: index === 0 ? 'given-name' : 'off'
-        })}
-        {input('lastName', t('lastName'), {
-          autoComplete: index === 0 ? 'family-name' : 'off'
-        })}
-        {input('dateOfBirth', t('dateOfBirth'), { type: 'date' })}
-      </div>
-      {kind === 'adult' && (
+      <div className={styles.passengerRows}>
         <div className="form-row">
-          {input('phone', t('phone'), {
-            type: 'tel',
-            hint: t('phoneHint'),
-            autoComplete: index === 0 ? 'tel' : 'off'
+          {input('name', t('firstName'), {
+            autoComplete: index === 0 ? 'given-name' : 'off'
           })}
-          {input('additionalPhone', t('additionalPhone'), {
-            type: 'tel',
-            required: false
+          {input('lastName', t('lastName'), {
+            autoComplete: index === 0 ? 'family-name' : 'off'
           })}
+          {input('dateOfBirth', t('dateOfBirth'), { type: 'date' })}
         </div>
-      )}
-      {index === 0 &&
-        input('email', t('email'), {
-          type: 'email',
-          hint: t('emailHint'),
-          autoComplete: 'email'
-        })}
-      {available.length > 0 && (
-        <div className="form-row">
-          <label htmlFor={id('discountId')}>
-            {t('discount')}
-            <br />
-            <select id={id('discountId')} {...register(field('discountId'))}>
-              <option value={NO_DISCOUNT}>{t('noDiscount')}</option>
-              {available.flatMap((group) =>
-                group.items.map((item) => (
-                  <option key={item.id} value={String(item.id)}>
-                    {item.name}
-                  </option>
-                ))
+        {kind === 'adult' && (
+          <div className="form-row">
+            {input('phone', t('phone'), {
+              type: 'tel',
+              hint: t('phoneHint'),
+              autoComplete: index === 0 ? 'tel' : 'off'
+            })}
+            {input('additionalPhone', t('additionalPhone'), {
+              type: 'tel',
+              required: false
+            })}
+          </div>
+        )}
+        {index === 0 && (
+          <div className="form-row">
+            {input('email', t('email'), {
+              type: 'email',
+              hint: t('emailHint'),
+              autoComplete: 'email'
+            })}
+          </div>
+        )}
+        {available.length > 0 && (
+          <div className="form-row">
+            <div className="field">
+              <label htmlFor={id('discountId')} className="field-label">
+                {t('discount')}
+              </label>
+              <select id={id('discountId')} {...register(field('discountId'))}>
+                <option value={NO_DISCOUNT}>{t('noDiscount')}</option>
+                {available.flatMap((group) =>
+                  group.items.map((item) => (
+                    <option key={item.id} value={String(item.id)}>
+                      {item.name}
+                    </option>
+                  ))
+                )}
+              </select>
+              {errors?.discountId?.message && (
+                <span className="field-error" role="alert">
+                  {errors.discountId.message}
+                </span>
               )}
-            </select>
-            {errors?.discountId?.message && (
-              <span className="field-error" role="alert">
-                <br />
-                {errors.discountId.message}
-              </span>
-            )}
-          </label>
-          {isCardDiscount(discountId, groups) &&
-            input('cardNumber', t('cardNumber'))}
-        </div>
-      )}
+            </div>
+            {isCardDiscount(discountId, groups) &&
+              input('cardNumber', t('cardNumber'))}
+          </div>
+        )}
+      </div>
     </fieldset>
   );
 }

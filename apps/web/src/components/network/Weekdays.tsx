@@ -10,9 +10,9 @@ export function Weekdays({ days }: { days: number[] }) {
   const long = weekdayNames(locale, 'long');
   const ordered = WEEK_ORDER.filter((day) => days.includes(day));
   return (
-    <span>
+    <span className="days">
       {ordered.map((day, index) => (
-        <abbr key={day} title={long[day]}>
+        <abbr key={day} title={long[day]} className="day">
           {names[day]}
           {index < ordered.length - 1 ? ' ' : ''}
         </abbr>

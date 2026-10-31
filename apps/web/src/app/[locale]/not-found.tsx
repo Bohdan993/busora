@@ -5,10 +5,15 @@ export default function NotFound() {
   const t = useTranslations('notFound');
 
   return (
-    <section className="page">
+    <section className="not-found">
+      <p className="not-found-code" aria-hidden="true">
+        404
+      </p>
       <h1>{t('title')}</h1>
       <p>
-        <Link href="/">{t('home')}</Link>
+        <Link href="/" className="button">
+          {t('home')}
+        </Link>
       </p>
     </section>
   );

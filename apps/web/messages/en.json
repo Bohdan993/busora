@@ -26,7 +26,8 @@
       "uk": "Українська",
       "cs": "Čeština",
       "en": "English"
-    }
+    },
+    "demoBadge": "Demo"
   },
   "nav": {
     "home": "Home",
@@ -35,7 +36,8 @@
     "fares": "Fares",
     "rules": "Rules",
     "contacts": "Contacts",
-    "menu": "Main navigation"
+    "menu": "Main navigation",
+    "book": "Buy a ticket"
   },
   "footer": {
     "navigation": "Navigation",
@@ -115,7 +117,8 @@
     "passengers": "Passengers",
     "review": "Review",
     "payment": "Payment",
-    "done": "Ticket"
+    "done": "Ticket",
+    "completed": "completed"
   },
   "passengers": {
     "title": "Passenger details",
@@ -186,6 +189,7 @@
   },
   "home": {
     "hero": {
+      "badge": "Ukraine ⇄ Czech Republic",
       "title": "Buses between Ukraine and the Czech Republic",
       "text": "Comfortable coaches from Kyiv, Lviv and western Ukraine to Prague, Brno, Ostrava and Pilsen — and back. Book online in a few minutes.",
       "phones": "Call us"

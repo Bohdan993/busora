@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Check, Download } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import {
@@ -13,6 +14,7 @@ import { useErrorMessage } from '@/lib/api/hooks';
 import { clearBooking, useBooking } from '@/lib/booking/storage';
 import { formatDate, formatMoney } from '@/lib/format';
 import { BookingSteps } from './BookingSteps';
+import styles from './booking.module.css';
 
 function saveFile(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -71,70 +73,78 @@ function Ticket({ paid }: { paid: MockCompletion }) {
   const ticket = summary.data;
   const date = (iso: string) => formatDate(iso, locale);
   return (
-    <>
+    <div className="narrow">
       <BookingSteps current="done" />
-      <h1>{t('success.title')}</h1>
-      <p>
-        <strong>
-          {t('success.ticketNumber', { number: ticket.ticketNumber })}
-        </strong>
-      </p>
-      <dl>
-        <dt>{t('success.trip')}</dt>
-        <dd>
-          {ticket.origin.name} → {ticket.destination.name}
-        </dd>
-        <dt>{t('success.dates')}</dt>
-        <dd>
-          {date(ticket.dateOfDeparture)}
-          {ticket.dateOfReturn && ` – ${date(ticket.dateOfReturn)}`}
-        </dd>
-        <dt>{t('success.passengers')}</dt>
-        <dd>
-          <ul>
-            {ticket.passengers.map((p, index) => (
-              <li key={index}>
-                {p.name} {p.lastName}
-              </li>
-            ))}
-          </ul>
-        </dd>
-        <dt>{t('success.paid')}</dt>
-        <dd>
-          {formatMoney(
-            ticket.amountPaid.amount,
-            ticket.amountPaid.currency,
-            locale
-          )}
-        </dd>
-      </dl>
-      {download.isError && (
-        <p role="alert" className="error">
-          {errorMessage(download.error)}
+      <section className={`card card-raised ${styles.centered}`}>
+        <span className={`${styles.statusIcon} ${styles.statusPositive}`}>
+          <Check size={36} strokeWidth={2.5} aria-hidden="true" />
+        </span>
+        <h1>{t('success.title')}</h1>
+        <p>
+          <span className="badge badge-large">
+            {t('success.ticketNumber', { number: ticket.ticketNumber })}
+          </span>
         </p>
-      )}
-      <p>
-        <button
-          type="button"
-          onClick={() => download.mutate()}
-          disabled={download.isPending}
-        >
-          {download.isPending
-            ? t('success.downloading')
-            : t('success.download')}
-        </button>
-      </p>
-      <p className="muted">{t('success.emailNote')}</p>
-      <p>
-        <Link
-          href="/"
-          onClick={() =>
-            clearBooking('payment', 'offer', 'search', 'expiresAt')
-          }
-        >
-          {t('success.bookAnother')}
-        </Link>
-      </p>
-    </>
+        <dl className={styles.ticket}>
+          <dt>{t('success.trip')}</dt>
+          <dd>
+            {ticket.origin.name} → {ticket.destination.name}
+          </dd>
+          <dt>{t('success.dates')}</dt>
+          <dd>
+            {date(ticket.dateOfDeparture)}
+            {ticket.dateOfReturn && ` – ${date(ticket.dateOfReturn)}`}
+          </dd>
+          <dt>{t('success.passengers')}</dt>
+          <dd>
+            <ul>
+              {ticket.passengers.map((p, index) => (
+                <li key={index}>
+                  {p.name} {p.lastName}
+                </li>
+              ))}
+            </ul>
+          </dd>
+          <dt>{t('success.paid')}</dt>
+          <dd>
+            {formatMoney(
+              ticket.amountPaid.amount,
+              ticket.amountPaid.currency,
+              locale
+            )}
+          </dd>
+        </dl>
+        {download.isError && (
+          <p role="alert" className="error">
+            {errorMessage(download.error)}
+          </p>
+        )}
+        <div className="stack">
+          <button
+            type="button"
+            className="button-block"
+            onClick={() => download.mutate()}
+            disabled={download.isPending}
+          >
+            <Download size={18} aria-hidden="true" />
+            {download.isPending
+              ? t('success.downloading')
+              : t('success.download')}
+          </button>
+          <Link
+            href="/"
+            className="button button-outline button-block"
+            onClick={() =>
+              clearBooking('payment', 'offer', 'search', 'expiresAt')
+            }
+          >
+            {t('success.bookAnother')}
+          </Link>
+        </div>
+        <p className={`muted caption ${styles.afterActions}`}>
+          {t('success.emailNote')}
+        </p>
+      </section>
+    </div>
   );
 }

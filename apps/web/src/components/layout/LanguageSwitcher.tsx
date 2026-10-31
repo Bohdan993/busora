@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { routing, type Locale } from '@/i18n/routing';
+import styles from './SiteHeader.module.css';
 
 export function LanguageSwitcher() {
   const t = useTranslations('common');
@@ -15,7 +16,7 @@ export function LanguageSwitcher() {
     router.replace(`${pathname}${window.location.search}`, { locale: next });
 
   return (
-    <label className="language-switcher">
+    <label className={styles.language}>
       <span className="visually-hidden">{t('language')}</span>
       <select
         value={locale}

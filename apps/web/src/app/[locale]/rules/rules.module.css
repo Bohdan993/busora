@@ -1,0 +1,30 @@
+.contents {
+  padding: var(--card-padding) clamp(1.5rem, 1rem + 2vw, 2.5rem);
+  border-radius: var(--radius-card);
+  background: var(--color-mist);
+}
+
+.contents h2 {
+  font-size: var(--text-subheading);
+  letter-spacing: var(--tracking-subheading);
+}
+
+.contents ol {
+  columns: 2 16rem;
+  column-gap: var(--space-40);
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.contents li {
+  break-inside: avoid;
+  padding-block: var(--space-4);
+}
+
+.rule h2 {
+  font-size: var(--text-heading-sm);
+}
+
+.rule ol {
+  padding-left: 1.25rem;
+}

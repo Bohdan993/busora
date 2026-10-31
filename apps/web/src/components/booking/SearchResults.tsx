@@ -21,8 +21,9 @@ import { startSessionClock, writeBooking } from '@/lib/booking/storage';
 import { formatDate } from '@/lib/format';
 import { cityName } from '@/lib/network';
 import { BookingSteps } from './BookingSteps';
-import { FlightOffer } from './FlightOffer';
+import { FlightOffer, type LegHeading } from './FlightOffer';
 import { SessionTimer } from './SessionTimer';
+import styles from './booking.module.css';
 
 const NOTHING_ON_DATE = ['NO_FLIGHTS', 'NO_FREE_SEATS'];
 
@@ -157,6 +158,7 @@ function Results({ query }: { query: SearchQuery }) {
     list: BusFlight[],
     isMain: boolean,
     direction: Direction,
+    legHeading: LegHeading,
     showReturn = true
   ) =>
     list.map((offer) => (
@@ -165,28 +167,33 @@ function Results({ query }: { query: SearchQuery }) {
         offer={offer}
         currency={query.currencyAbbr}
         showReturn={showReturn}
+        legHeading={legHeading}
         busy={select.isPending && select.variables?.offer.id === offer.id}
         onSelect={() => select.mutate({ offer, isMain, direction })}
       />
     ));
 
   return (
-    <>
+    <div className="narrow">
       <BookingSteps current="search" />
-      <h1>{t('results.title', { from, to })}</h1>
-      <p className="muted">
-        {isRound
-          ? t('results.summaryRound', {
-              date: dateText(query.startDate),
-              returnDate: dateText(query.endDate),
-              passengers
-            })
-          : t('results.summary', {
-              date: dateText(query.startDate),
-              passengers
-            })}
-      </p>
-      <SessionTimer />
+      <div className={styles.head}>
+        <h1>{t('results.title', { from, to })}</h1>
+        <div className={styles.headMeta}>
+          <p className="muted">
+            {isRound
+              ? t('results.summaryRound', {
+                  date: dateText(query.startDate),
+                  returnDate: dateText(query.endDate),
+                  passengers
+                })
+              : t('results.summary', {
+                  date: dateText(query.startDate),
+                  passengers
+                })}
+          </p>
+          <SessionTimer />
+        </div>
+      </div>
 
       {select.isError && (
         <p role="alert" className="error">
@@ -202,13 +209,13 @@ function Results({ query }: { query: SearchQuery }) {
       )}
       {search.isSuccess && (
         <section className="section">
-          {offers(search.data, true, 'forwards')}
+          {offers(search.data, true, 'forwards', 'h2')}
         </section>
       )}
 
       {nothingOnDate && (
         <section className="section" aria-live="polite">
-          <p>{errorMessage(search.error)}</p>
+          <p className="notice">{errorMessage(search.error)}</p>
           <h2>{t('results.alternativesTitle')}</h2>
           <p className="muted">{t('results.alternativesHint')}</p>
           {outboundAlternatives.isPending && <p>{t('common.loading')}</p>}
@@ -218,9 +225,9 @@ function Results({ query }: { query: SearchQuery }) {
             </p>
           )}
           {outboundAlternatives.data?.map((day) => (
-            <div key={day.date}>
+            <div key={day.date} className={styles.day}>
               <h3>{dateText(day.date)}</h3>
-              {offers(day.flights, false, 'forwards', false)}
+              {offers(day.flights, false, 'forwards', 'h4', false)}
             </div>
           ))}
         </section>
@@ -237,19 +244,19 @@ function Results({ query }: { query: SearchQuery }) {
             </p>
           )}
           {returnAlternatives.data?.map((day) => (
-            <div key={day.date}>
+            <div key={day.date} className={styles.day}>
               <h3>{dateText(day.date)}</h3>
-              {offers(day.flights, false, 'backwards', false)}
+              {offers(day.flights, false, 'backwards', 'h4', false)}
             </div>
           ))}
         </section>
       )}
 
-      <p className="muted">{t('results.arrivalNote')}</p>
+      <p className="muted caption">{t('results.arrivalNote')}</p>
       <details>
         <summary>{t('results.newSearch')}</summary>
         <SearchForm initial={query} />
       </details>
-    </>
+    </div>
   );
 }

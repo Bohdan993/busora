@@ -15,6 +15,7 @@ import { formatMoney } from '@/lib/format';
 import { BookingSteps } from './BookingSteps';
 import { SessionTimer } from './SessionTimer';
 import { TripSummary } from './TripSummary';
+import styles from './booking.module.css';
 
 export function ReviewStep() {
   const t = useTranslations();
@@ -51,10 +52,12 @@ export function ReviewStep() {
     : [];
 
   return (
-    <>
+    <div className="narrow">
       <BookingSteps current="review" />
-      <h1>{t('review.title')}</h1>
-      <SessionTimer />
+      <div className={styles.head}>
+        <h1>{t('review.title')}</h1>
+        <SessionTimer />
+      </div>
       <TripSummary />
       {current.isPending && <p>{t('common.loading')}</p>}
       {current.isError && (
@@ -78,32 +81,34 @@ export function ReviewStep() {
               <Link href="/booking/passengers">{t('review.edit')}</Link>
             </p>
           </section>
-          <p>
-            {t('review.total')}:{' '}
-            <strong>
-              {currency
-                ? formatMoney(current.data.price, currency, locale)
-                : `${current.data.price} ${current.data.currencySymbol}`}
-            </strong>
-          </p>
-          <p className="muted">{t('review.chargeNote')}</p>
-          <p className="muted">
-            {t('review.terms')} <Link href="/rules">{t('nav.rules')}</Link>
-          </p>
           {checkout.isError && (
             <p role="alert" className="error">
               {errorMessage(checkout.error)}
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => checkout.mutate()}
-            disabled={checkout.isPending}
-          >
-            {checkout.isPending ? t('review.starting') : t('review.pay')}
-          </button>
+          <div className={styles.total}>
+            <p>
+              <span className="muted">{t('review.total')}</span>
+              <strong className={styles.totalAmount}>
+                {currency
+                  ? formatMoney(current.data.price, currency, locale)
+                  : `${current.data.price} ${current.data.currencySymbol}`}
+              </strong>
+            </p>
+            <button
+              type="button"
+              onClick={() => checkout.mutate()}
+              disabled={checkout.isPending}
+            >
+              {checkout.isPending ? t('review.starting') : t('review.pay')}
+            </button>
+          </div>
+          <p className="muted caption">{t('review.chargeNote')}</p>
+          <p className="muted caption">
+            {t('review.terms')} <Link href="/rules">{t('nav.rules')}</Link>
+          </p>
         </>
       )}
-    </>
+    </div>
   );
 }

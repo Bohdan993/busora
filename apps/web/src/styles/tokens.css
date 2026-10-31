@@ -1,0 +1,90 @@
+/*
+ * Design tokens, from the Phase 10 style reference (a clean white canvas,
+ * pill-shaped controls, Inter with tight tracking, one soft shadow).
+ *
+ * Deviations from the reference, on purpose:
+ * - Busora blue replaces the reference's Signal Blue as the action colour, and
+ *   Busora green marks positive states (decided with the owner, 2026-10-31).
+ * - A danger red for errors: forms need one and the reference has none.
+ * - Body text tracking is milder than the reference's display tracking, which
+ *   cramps Cyrillic and Czech diacritics at reading sizes.
+ * - Display sizes scale down with the viewport (clamp) for phones.
+ */
+:root {
+  /* Neutrals */
+  --color-ink: #1d1d1f;
+  --color-white: #ffffff;
+  --color-mist: #f0f2f4;
+  --color-fog: #e5e6e8;
+  --color-muted: #5c6066;
+  --color-deep-navy: #000a3b;
+
+  /* Action: Busora blue (4.6:1 under white text). The darker shade is for
+     link text and hover, and stays above 4.5:1 on mist as well. */
+  --color-action: #007bb7;
+  --color-action-strong: #00699d;
+  --color-action-soft: #e6f2f8;
+
+  /* Positive states: green on its own is 3.4:1, so it marks dots, icons and
+     borders; text uses the darker shade (5.4:1) */
+  --color-positive: #2ca04d;
+  --color-positive-text: #1d7a38;
+  --color-positive-soft: #eaf6ee;
+
+  /* Badges and status punctuation only */
+  --color-highlight: #ffcb00;
+
+  --color-danger: #b42318;
+  --color-danger-soft: #fef3f2;
+
+  /* Type */
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    Roboto, sans-serif;
+  --text-caption: 0.875rem;
+  --text-body-sm: 1rem;
+  --text-body: 1.125rem;
+  --text-subheading: 1.375rem;
+  --text-heading-sm: clamp(1.375rem, 1.2rem + 0.8vw, 1.8125rem);
+  --text-heading: clamp(1.75rem, 1.35rem + 1.7vw, 2.6875rem);
+  --text-heading-lg: clamp(2rem, 1.45rem + 2.4vw, 3.125rem);
+  --text-display: clamp(2.5rem, 1.6rem + 4vw, 4.5rem);
+  --text-display-xl: clamp(6rem, 3rem + 12vw, 9rem);
+  --tracking-body: -0.011em;
+  --tracking-subheading: -0.03em;
+  --tracking-heading: -0.036em;
+  --tracking-display: -0.031em;
+  --leading-body: 1.6;
+  --leading-heading: 1.15;
+  --leading-display: 1;
+
+  /* Space (4px base) */
+  --space-4: 0.25rem;
+  --space-8: 0.5rem;
+  --space-12: 0.75rem;
+  --space-16: 1rem;
+  --space-20: 1.25rem;
+  --space-28: 1.75rem;
+  --space-40: 2.5rem;
+  --space-64: 4rem;
+  --space-72: 4.5rem;
+
+  /* Layout */
+  --page-max-width: 75rem;
+  --page-gutter: 1rem;
+  --section-gap: clamp(3.5rem, 2.5rem + 4vw, 5rem);
+  --card-padding: 1.5rem;
+  --element-gap: 0.875rem;
+
+  /* Shapes */
+  --radius-input: 18px;
+  --radius-card: 28.8px;
+  --radius-pill: 100px;
+  --shadow-soft: rgba(0, 0, 0, 0.06) 0 8px 48px 0;
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --page-gutter: 1.5rem;
+  }
+}

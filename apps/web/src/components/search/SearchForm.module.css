@@ -1,0 +1,66 @@
+.form {
+  padding: clamp(1.25rem, 0.75rem + 2vw, 2rem);
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--shadow-soft);
+  text-align: left;
+}
+
+.placeholder {
+  display: grid;
+  min-height: 14rem;
+  place-items: center;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12) var(--space-20);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-20);
+}
+
+.top h2 {
+  margin: 0;
+  font-size: var(--text-subheading);
+  letter-spacing: var(--tracking-subheading);
+}
+
+.fields {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+}
+
+.bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  align-items: flex-end;
+  margin-top: var(--space-12);
+}
+
+/* Wide enough for "Children (under 16)" on one line in every locale */
+.count {
+  width: 11rem;
+}
+
+.note {
+  align-self: center;
+  margin: 0;
+}
+
+.submit {
+  margin-left: auto;
+}
+
+@media (max-width: 30rem) {
+  .count {
+    flex: 1;
+  }
+
+  .submit {
+    flex-basis: 100%;
+  }
+}

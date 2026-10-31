@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@/i18n/routing';
 import messages from '../../../../messages/en.json';
+import styles from './rules.module.css';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -27,9 +28,11 @@ export default async function RulesPage({ params }: Props) {
 
   return (
     <>
-      <h1>{t('title')}</h1>
-      <p>{t('intro')}</p>
-      <nav aria-labelledby="rules-contents">
+      <div className="page-head">
+        <h1>{t('title')}</h1>
+        <p className="lead muted">{t('intro')}</p>
+      </div>
+      <nav aria-labelledby="rules-contents" className={styles.contents}>
         <h2 id="rules-contents">{t('contents')}</h2>
         <ol>
           {SECTIONS.map((key) => (
@@ -40,32 +43,34 @@ export default async function RulesPage({ params }: Props) {
         </ol>
       </nav>
       {SECTIONS.map((key) => (
-        <section key={key} id={key} className="section">
+        <section key={key} id={key} className={`section prose ${styles.rule}`}>
           <h2>{t(`sections.${key}.title`)}</h2>
           {key === 'refunds' ? (
             <>
               <p>{t('sections.refunds.text')}</p>
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('sections.refunds.when')}</th>
-                    <th scope="col">{t('sections.refunds.fee')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(
-                    t.raw('sections.refunds.rows') as {
-                      when: string;
-                      fee: string;
-                    }[]
-                  ).map((row) => (
-                    <tr key={row.when}>
-                      <td>{row.when}</td>
-                      <td>{row.fee}</td>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t('sections.refunds.when')}</th>
+                      <th scope="col">{t('sections.refunds.fee')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(
+                      t.raw('sections.refunds.rows') as {
+                        when: string;
+                        fee: string;
+                      }[]
+                    ).map((row) => (
+                      <tr key={row.when}>
+                        <td>{row.when}</td>
+                        <td>{row.fee}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           ) : (
             <ol>

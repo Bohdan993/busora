@@ -21,9 +21,11 @@ export default async function AttributionsPage({ params }: Props) {
 
   return (
     <>
-      <h1>{t('title')}</h1>
-      <p>{t('intro')}</p>
-      <ul>
+      <div className="page-head">
+        <h1>{t('title')}</h1>
+        <p className="lead muted">{t('intro')}</p>
+      </div>
+      <ul className="card prose stack">
         {credits.map((credit) => (
           <li key={credit.src}>
             <strong>{credit.subject}</strong> — {credit.title},{' '}

@@ -136,7 +136,7 @@ export function FaresTables() {
         </>
       )}
       <DiscountsTable />
-      <section className="section">
+      <section className="section card card-muted prose">
         <h2>{t('faresPage.baggageTitle')}</h2>
         <ul>
           {(t.raw('faresPage.baggage') as string[]).map((item) => (
