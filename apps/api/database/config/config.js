@@ -40,8 +40,8 @@ const config = {
     port: Number(process.env.DB_PORT) || 3306,
     dialect: process.env.DB_DIALECT,
     seederStorage: 'sequelize',
-    logging: (msg) =>
-      console.log(msg, '(Date: ' + new Date().toUTCString() + ')')
+    // Integration tests: SQL logs would bury the test report
+    logging: false
   },
   production: {
     username: process.env.DB_USER,
