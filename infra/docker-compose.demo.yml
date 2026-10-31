@@ -141,9 +141,15 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      # The password comes from the container's env, not this file
+      # Over TCP: on the first start MySQL runs a socket-only temporary server
+      # while it initialises, and a socket ping would call that healthy (the
+      # first deploy's migrations then hit the restart). The password comes
+      # from the container's env, not this file.
       test:
-        ["CMD-SHELL", 'mysqladmin ping -h localhost -p"$$MYSQL_ROOT_PASSWORD"']
+        [
+          "CMD-SHELL",
+          'mysqladmin ping -h 127.0.0.1 --protocol=tcp -p"$$MYSQL_ROOT_PASSWORD"',
+        ]
       interval: 5s
       timeout: 5s
       retries: 20
