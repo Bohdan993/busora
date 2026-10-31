@@ -1,0 +1,436 @@
+{
+  "meta": {
+    "title": "Busora — buses between Ukraine and Czechia",
+    "description": "Book bus tickets between Ukraine and the Czech Republic. An educational demo project — not a real carrier."
+  },
+  "common": {
+    "brand": "Busora",
+    "demoBanner": "Educational demo — Busora is not a real carrier. Payments are simulated and tickets are not valid for travel.",
+    "skipToContent": "Skip to content",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "back": "Back",
+    "continue": "Continue",
+    "close": "Close",
+    "oneWay": "One way",
+    "roundTrip": "Round trip",
+    "openDate": "Open date",
+    "from": "From",
+    "to": "To",
+    "duration": "{hours} h {minutes} min",
+    "durationHours": "{hours} h",
+    "priceFrom": "from {price}",
+    "nextDay": "+{days, plural, one {# day} other {# days}}",
+    "language": "Language",
+    "languages": {
+      "uk": "Українська",
+      "cs": "Čeština",
+      "en": "English"
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "routes": "Routes",
+    "schedule": "Schedule",
+    "fares": "Fares",
+    "rules": "Rules",
+    "contacts": "Contacts",
+    "menu": "Main navigation"
+  },
+  "footer": {
+    "navigation": "Navigation",
+    "contacts": "Contacts",
+    "offer": "Public offer and carriage rules",
+    "attributions": "Photo credits",
+    "copyright": "© Busora — an educational demo project, not a real carrier."
+  },
+  "company": {
+    "name": "Busora LLC (fictional)",
+    "address": "1 Navchalna St., office 1, Kyiv 01001, Ukraine",
+    "email": "info@busora.test",
+    "hours": "Mon–Fri 9:00–18:00 (Kyiv time)"
+  },
+  "errors": {
+    "BAD_REQUEST": "Something in the request was not right. Please check your choices.",
+    "VALIDATION_FAILED": "Please correct the highlighted fields.",
+    "NOT_FOUND": "We could not find what you were looking for.",
+    "INVALID_DATES": "Please choose a departure date from today on and, for a round trip, a later return date.",
+    "NO_FLIGHTS": "There are no buses on these dates.",
+    "NO_FREE_SEATS": "There are not enough free seats on these dates.",
+    "NO_ALTERNATIVES": "There are no other departures in the coming days.",
+    "SESSION_NOT_STARTED": "Your booking session has expired. Please start a new search.",
+    "FLIGHT_NOT_SELECTED": "Please choose a bus first.",
+    "PASSENGERS_MISSING": "Please enter the passenger details first.",
+    "EXCHANGE_RATE_UNAVAILABLE": "Prices are temporarily unavailable. Please try again in a few minutes.",
+    "SERVER_ERROR": "Something went wrong on our side. Please try again.",
+    "NETWORK_ERROR": "The booking service cannot be reached. Please check your connection and try again."
+  },
+  "search": {
+    "title": "Book a ticket",
+    "from": "From",
+    "to": "To",
+    "chooseCity": "Choose a city",
+    "chooseOriginFirst": "Choose a departure city first",
+    "tripType": "Trip",
+    "departure": "Departure",
+    "return": "Return",
+    "adults": "Adults",
+    "children": "Children (under 16)",
+    "submit": "Search",
+    "swap": "Swap cities",
+    "busDays": "Buses run on: {days}",
+    "noDates": "No departures are available in the coming months.",
+    "returnAfterDeparture": "The return must be after the departure.",
+    "pickDate": "Choose a date"
+  },
+  "results": {
+    "title": "{from} → {to}",
+    "summary": "{date} · {passengers, plural, one {# passenger} other {# passengers}}",
+    "summaryRound": "{date} – {returnDate} · {passengers, plural, one {# passenger} other {# passengers}}",
+    "outbound": "Outbound",
+    "return": "Return",
+    "departs": "Departs",
+    "arrives": "Arrives",
+    "boarding": "Boarding",
+    "dropOff": "Drop-off",
+    "pricePerPassenger": "per passenger",
+    "promo": "Promo −{percent}%",
+    "select": "Select",
+    "selecting": "Selecting…",
+    "arrivalNote": "Arrival times are approximate: they depend on the border crossing.",
+    "alternativesTitle": "Nearest departures",
+    "alternativesReturnTitle": "Nearest return departures",
+    "alternativesHint": "There are no buses on the dates you chose. These are the next ones:",
+    "chooseReturnHint": "Now choose the return bus.",
+    "newSearch": "Change search"
+  },
+  "session": {
+    "remaining": "Your booking is held for {time}",
+    "expired": "Your booking session has expired.",
+    "restart": "Start a new search"
+  },
+  "steps": {
+    "label": "Booking steps",
+    "search": "Bus",
+    "passengers": "Passengers",
+    "review": "Review",
+    "payment": "Payment",
+    "done": "Ticket"
+  },
+  "passengers": {
+    "title": "Passenger details",
+    "adult": "Adult {n}",
+    "child": "Child {n}",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "phone": "Phone",
+    "phoneHint": "Ukrainian (+380) or Czech (+420) mobile number",
+    "additionalPhone": "Extra phone (optional)",
+    "email": "Email",
+    "emailHint": "The tickets are sent to this address.",
+    "dateOfBirth": "Date of birth",
+    "discount": "Discount",
+    "noDiscount": "No discount",
+    "cardNumber": "Loyalty card number",
+    "passportNote": "Names and dates of birth must match the passport.",
+    "promoNote": "This bus already has a promo price, so personal discounts do not apply.",
+    "pricePerPassenger": "{price} per passenger",
+    "submit": "Continue to review",
+    "required": "Please fill in this field.",
+    "invalidPhone": "Enter a Ukrainian (+380…) or Czech (+420…) mobile number.",
+    "invalidEmail": "Enter a valid email address.",
+    "invalidDate": "Enter a valid date of birth.",
+    "latinOnly": "Use Latin letters (A–Z), spaces, hyphens or apostrophes only.",
+    "tooShort": "Enter at least {min} letters.",
+    "notBookable": "Your booking session has expired or no bus is selected."
+  },
+  "review": {
+    "title": "Check your booking",
+    "trip": "Trip",
+    "dates": "Dates",
+    "passengers": "Passengers",
+    "total": "Total",
+    "chargeNote": "You pay in Ukrainian hryvnias (UAH); the amount is shown on the next step.",
+    "edit": "Change passengers",
+    "pay": "Go to payment",
+    "starting": "Preparing payment…",
+    "terms": "By continuing you accept the carriage rules."
+  },
+  "payment": {
+    "title": "Payment",
+    "demoNote": "This is a simulated payment page. No money is charged and no card details are needed.",
+    "amount": "Amount to pay",
+    "pay": "Pay {amount}",
+    "decline": "Decline payment",
+    "processing": "Processing…",
+    "noCheckout": "There is no payment in progress. Please start a new search.",
+    "unsupported": "This payment method is not available in the demo."
+  },
+  "success": {
+    "title": "Your booking is confirmed",
+    "ticketNumber": "Ticket number {number}",
+    "emailNote": "The tickets have also been emailed to you (in this demo, emails are caught by a test inbox).",
+    "trip": "Trip",
+    "dates": "Dates",
+    "passengers": "Passengers",
+    "paid": "Paid",
+    "download": "Download tickets (PDF)",
+    "downloading": "Preparing download…",
+    "bookAnother": "Book another trip",
+    "notReady": "Your ticket is still being issued. Please try again in a moment."
+  },
+  "failed": {
+    "title": "The payment did not go through",
+    "text": "No money was charged and no seats were booked.",
+    "tryAgain": "Search again"
+  },
+  "home": {
+    "hero": {
+      "title": "Buses between Ukraine and the Czech Republic",
+      "text": "Comfortable coaches from Kyiv, Lviv and western Ukraine to Prague, Brno, Ostrava and Pilsen — and back. Book online in a few minutes.",
+      "phones": "Call us"
+    },
+    "advantages": {
+      "title": "On board",
+      "items": {
+        "wifi": "Wi-Fi",
+        "screens": "Screens and entertainment",
+        "sockets": "Power sockets",
+        "climate": "Climate control",
+        "lighting": "Reading lights and air vents",
+        "seats": "Reclining seats",
+        "footrest": "Footrests",
+        "luggage": "Large luggage hold",
+        "toilet": "Toilet",
+        "payment": "Pay online or at the office"
+      }
+    },
+    "fleet": {
+      "title": "Our fleet",
+      "year": "Year",
+      "emission": "Engine",
+      "seats": "Seats",
+      "class": "Class",
+      "note": "The fleet is illustrative: Busora is a demo company."
+    },
+    "popular": {
+      "title": "Popular destinations",
+      "more": "Timetable and fares",
+      "book": "Book"
+    },
+    "about": {
+      "title": "About Busora",
+      "lead": "Busora runs regular coach services between Ukraine and the Czech Republic: two lines, four directions, thirteen cities. This website is an educational project that shows how a bus booking service works from search to ticket — the company itself is fictional.",
+      "readMore": "Read more",
+      "readLess": "Show less",
+      "why": {
+        "title": "Why travel with Busora",
+        "items": [
+          "Direct buses without changes between Ukraine and Czechia.",
+          "Fixed timetables with departures on set weekdays.",
+          "Discounts for children, students, seniors and groups.",
+          "Tickets by email in Ukrainian, Czech or English."
+        ]
+      },
+      "howToBook": {
+        "title": "How to book a ticket",
+        "steps": [
+          "Choose where you travel from and to, the date and the number of passengers.",
+          "Pick a bus and enter the passenger details.",
+          "Check the booking and pay online.",
+          "Download your tickets — they are also sent to your email."
+        ]
+      },
+      "border": {
+        "title": "Crossing the border",
+        "items": [
+          "Ukrainian citizens with a biometric passport can stay in the EU visa-free for up to 90 days in any 180-day period; holders of temporary protection follow their own rules.",
+          "Have your passport, ticket and, for children travelling without both parents, the required consent ready.",
+          "Border checks can take several hours, so arrival times are approximate.",
+          "Check customs limits for cash, tobacco, alcohol and food before you travel."
+        ]
+      },
+      "czechia": {
+        "title": "Travelling in the Czech Republic",
+        "text": "Prague, Brno, Ostrava and Pilsen are linked by fast trains and buses, and city public transport is easy to use with contactless payment. The currency is the Czech koruna (CZK); cards are accepted almost everywhere."
+      }
+    }
+  },
+  "routesPage": {
+    "title": "Bus routes",
+    "intro": "Every city pair we serve, with fares and the days buses depart. Choose a route to book.",
+    "filterFrom": "Departure city",
+    "filterTo": "Arrival city",
+    "filterDay": "Day of departure",
+    "anyCity": "Any city",
+    "anyDay": "Any day",
+    "reset": "Reset filters",
+    "route": "Route",
+    "price": "One way / round trip",
+    "daysFromUa": "From Ukraine",
+    "daysFromCz": "From Czechia",
+    "duration": "Travel time",
+    "empty": "No routes match the filters.",
+    "book": "Book",
+    "alsoTitle": "Departures by city",
+    "toCountry": "{city} → {country}",
+    "infoTitle": "Travelling by bus between Ukraine and Czechia",
+    "info": [
+      "A coach is the simplest way to travel between the two countries: no changes, generous baggage allowance and stops close to city centres.",
+      "Buses from Ukraine leave in the morning and arrive in the Czech Republic the next morning; return buses leave in the evening."
+    ]
+  },
+  "schedulePage": {
+    "title": "Timetable",
+    "line": "Line",
+    "lineName": "Line {n}: {name}",
+    "city": "City",
+    "stop": "Stop",
+    "departure": "Departure",
+    "arrival": "Arrival",
+    "note": "Times are local. Arrival times are approximate and depend on the border crossing."
+  },
+  "faresPage": {
+    "title": "Fares",
+    "intro": "Fares from Ukraine are in hryvnias (UAH), fares from the Czech Republic in korunas (CZK). Each cell shows one way / round trip.",
+    "line": "Line",
+    "fromTo": "To ↓ / From →",
+    "discountsTitle": "Discounts",
+    "who": "Who",
+    "discount": "Discount",
+    "groups": {
+      "children": "Children",
+      "adults": "Adults",
+      "both": "Everyone",
+      "discount-card": "Loyalty cards"
+    },
+    "discountsNote": "Personal discounts do not apply to promo tickets. Bring a document that proves the discount.",
+    "baggageTitle": "Baggage",
+    "baggage": [
+      "Included: 2 pieces up to 60 × 40 × 40 cm with a total weight of up to 50 kg, including up to 5 kg of hand luggage.",
+      "Children under 12: 1 piece up to 25 kg.",
+      "Extra baggage, if there is room: 50 Kč per kg, or the equivalent in UAH."
+    ]
+  },
+  "rulesPage": {
+    "title": "Carriage rules",
+    "contents": "Contents",
+    "intro": "These rules are part of the public offer of Busora LLC, a fictional company of this educational project. They match the terms printed on every ticket.",
+    "sections": {
+      "general": {
+        "title": "General provisions",
+        "items": [
+          "The passenger is responsible for complying with passport, visa, customs and migration rules.",
+          "Passengers under 18 travelling without parents need a notarised consent from the parents or guardians.",
+          "The carrier may refuse to carry a passenger who is drunk, clearly unwell in a way that endangers others, or behaves dangerously.",
+          "The carrier is not liable for delays caused by events beyond its control: weather, border queues, road works or actions of state authorities.",
+          "Complaints about the service are accepted in writing."
+        ]
+      },
+      "carrier": {
+        "title": "Carrier's duties",
+        "items": [
+          "Provide the bus for boarding on time and depart according to the timetable.",
+          "Deliver passengers and their baggage to their destination.",
+          "Ensure safe carriage and good service on board.",
+          "Keep the bus in good technical and sanitary condition.",
+          "Give passengers accurate information about the trip."
+        ]
+      },
+      "passenger": {
+        "title": "Passenger's duties",
+        "items": [
+          "Arrive for boarding no later than 30 minutes before departure.",
+          "Show a valid passport and, if travelling with a discount, the document that entitles to it.",
+          "Keep the ticket until the end of the trip and show it on request.",
+          "Have the visa and migration documents needed for the trip.",
+          "Return to the bus on time at stops along the route.",
+          "Keep the bus clean and treat its equipment with care."
+        ]
+      },
+      "rights": {
+        "title": "Passenger's rights",
+        "items": [
+          "Safe and comfortable carriage.",
+          "Carriage of baggage within the allowance.",
+          "Information about the timetable, fares and rules.",
+          "A refund for an unused ticket under the terms below."
+        ]
+      },
+      "prohibited": {
+        "title": "Not allowed on board",
+        "items": [
+          "Smoking, including electronic cigarettes.",
+          "Drinking alcohol.",
+          "Carrying dangerous, flammable or prohibited goods.",
+          "Disturbing other passengers or the driver."
+        ]
+      },
+      "tickets": {
+        "title": "Tickets",
+        "items": [
+          "A ticket is personal and cannot be transferred to another person.",
+          "Promotional and open-date tickets are non-refundable.",
+          "An open-date return ticket is valid for 6 months from the first trip; the return can be made on any bus with free seats.",
+          "If a passenger breaks visa rules, the carrier may refuse carriage without refunding the ticket."
+        ]
+      },
+      "refunds": {
+        "title": "Refund for an unused ticket",
+        "text": "If you cancel the trip, the ticket price is refunded minus a fee that depends on when you cancel:",
+        "when": "Cancellation",
+        "fee": "Fee",
+        "rows": [
+          {
+            "when": "More than 30 days before departure",
+            "fee": "10% of the ticket price"
+          },
+          {
+            "when": "More than 72 hours before departure",
+            "fee": "25% of the ticket price"
+          },
+          {
+            "when": "24 to 72 hours before departure",
+            "fee": "50% of the ticket price"
+          },
+          {
+            "when": "Less than 24 hours before departure",
+            "fee": "100% of the ticket price"
+          }
+        ]
+      },
+      "baggage": {
+        "title": "Baggage",
+        "items": [
+          "The ticket includes 2 pieces of baggage up to 60 × 40 × 40 cm with a total weight of up to 50 kg, including hand luggage up to 5 kg.",
+          "A child's ticket (under 12) includes 1 piece of baggage up to 25 kg.",
+          "Extra baggage is carried if there is room in the luggage hold, at 50 Kč per kg or the equivalent in UAH at the exchange rate on the day of payment.",
+          "Passengers and their baggage are insured for the trip (fictional insurer in this demo)."
+        ]
+      }
+    }
+  },
+  "contactsPage": {
+    "title": "Contacts",
+    "note": "All contact details are fictional: Busora is an educational demo project.",
+    "phonesUa": "Phones in Ukraine",
+    "phonesCz": "Phones in the Czech Republic",
+    "localTime": "Local time {time}",
+    "office": "Head office",
+    "address": "Address",
+    "hours": "Opening hours",
+    "email": "Email",
+    "open": "Open now",
+    "closed": "Closed now"
+  },
+  "attributionsPage": {
+    "title": "Photo credits",
+    "intro": "Photos on this site come from Wikimedia Commons and are used under their licences.",
+    "by": "by {author}",
+    "source": "Source"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "home": "Go to the home page"
+  }
+}

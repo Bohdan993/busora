@@ -1,0 +1,436 @@
+{
+  "meta": {
+    "title": "Busora — autobusy mezi Ukrajinou a Českem",
+    "description": "Rezervace autobusových jízdenek mezi Ukrajinou a Českou republikou. Vzdělávací demo projekt — nejde o skutečného dopravce."
+  },
+  "common": {
+    "brand": "Busora",
+    "demoBanner": "Vzdělávací demo — Busora není skutečný dopravce. Platby jsou simulované a jízdenky neplatí pro cestování.",
+    "skipToContent": "Přejít k obsahu",
+    "loading": "Načítání…",
+    "retry": "Zkusit znovu",
+    "back": "Zpět",
+    "continue": "Pokračovat",
+    "close": "Zavřít",
+    "oneWay": "Jednosměrná",
+    "roundTrip": "Zpáteční",
+    "openDate": "Otevřené datum",
+    "from": "Odkud",
+    "to": "Kam",
+    "duration": "{hours} h {minutes} min",
+    "durationHours": "{hours} h",
+    "priceFrom": "od {price}",
+    "nextDay": "+{days, plural, one {# den} few {# dny} other {# dní}}",
+    "language": "Jazyk",
+    "languages": {
+      "uk": "Українська",
+      "cs": "Čeština",
+      "en": "English"
+    }
+  },
+  "nav": {
+    "home": "Úvod",
+    "routes": "Trasy",
+    "schedule": "Jízdní řád",
+    "fares": "Ceník",
+    "rules": "Přepravní řád",
+    "contacts": "Kontakty",
+    "menu": "Hlavní navigace"
+  },
+  "footer": {
+    "navigation": "Navigace",
+    "contacts": "Kontakty",
+    "offer": "Veřejná nabídka a přepravní řád",
+    "attributions": "Autoři fotografií",
+    "copyright": "© Busora — vzdělávací demo projekt, nejde o skutečného dopravce."
+  },
+  "company": {
+    "name": "Busora s.r.o. (fiktivní společnost)",
+    "address": "ul. Navčalna 1, kancelář 1, 01001 Kyjev, Ukrajina",
+    "email": "info@busora.test",
+    "hours": "Po–Pá 9:00–18:00 (kyjevského času)"
+  },
+  "errors": {
+    "BAD_REQUEST": "V požadavku je něco špatně. Zkontrolujte prosím svůj výběr.",
+    "VALIDATION_FAILED": "Opravte prosím označená pole.",
+    "NOT_FOUND": "Nepodařilo se najít, co hledáte.",
+    "INVALID_DATES": "Zvolte datum odjezdu od dneška a u zpáteční cesty pozdější datum návratu.",
+    "NO_FLIGHTS": "V tyto dny žádné autobusy nejedou.",
+    "NO_FREE_SEATS": "V tyto dny není dost volných míst.",
+    "NO_ALTERNATIVES": "V nejbližších dnech žádné jiné spoje nejedou.",
+    "SESSION_NOT_STARTED": "Platnost rezervace vypršela. Začněte prosím nové hledání.",
+    "FLIGHT_NOT_SELECTED": "Nejprve vyberte spoj.",
+    "PASSENGERS_MISSING": "Nejprve zadejte údaje cestujících.",
+    "EXCHANGE_RATE_UNAVAILABLE": "Ceny jsou dočasně nedostupné. Zkuste to prosím za pár minut.",
+    "SERVER_ERROR": "Něco se pokazilo. Zkuste to prosím znovu.",
+    "NETWORK_ERROR": "Rezervační služba je nedostupná. Zkontrolujte připojení a zkuste to znovu."
+  },
+  "search": {
+    "title": "Rezervovat jízdenku",
+    "from": "Odkud",
+    "to": "Kam",
+    "chooseCity": "Vyberte město",
+    "chooseOriginFirst": "Nejprve vyberte místo odjezdu",
+    "tripType": "Cesta",
+    "departure": "Odjezd",
+    "return": "Návrat",
+    "adults": "Dospělí",
+    "children": "Děti (do 16 let)",
+    "submit": "Hledat",
+    "swap": "Prohodit města",
+    "busDays": "Autobusy jezdí: {days}",
+    "noDates": "V příštích měsících nejsou k dispozici žádné spoje.",
+    "returnAfterDeparture": "Návrat musí být po odjezdu.",
+    "pickDate": "Vyberte datum"
+  },
+  "results": {
+    "title": "{from} → {to}",
+    "summary": "{date} · {passengers, plural, one {# cestující} few {# cestující} other {# cestujících}}",
+    "summaryRound": "{date} – {returnDate} · {passengers, plural, one {# cestující} few {# cestující} other {# cestujících}}",
+    "outbound": "Tam",
+    "return": "Zpět",
+    "departs": "Odjezd",
+    "arrives": "Příjezd",
+    "boarding": "Nástup",
+    "dropOff": "Výstup",
+    "pricePerPassenger": "za cestujícího",
+    "promo": "Akce −{percent} %",
+    "select": "Vybrat",
+    "selecting": "Vybíráme…",
+    "arrivalNote": "Časy příjezdu jsou orientační: závisí na přechodu hranice.",
+    "alternativesTitle": "Nejbližší spoje",
+    "alternativesReturnTitle": "Nejbližší spoje zpět",
+    "alternativesHint": "Ve zvolené dny žádné autobusy nejedou. Tyto jsou nejbližší:",
+    "chooseReturnHint": "Nyní vyberte spoj zpět.",
+    "newSearch": "Změnit hledání"
+  },
+  "session": {
+    "remaining": "Rezervace je držena ještě {time}",
+    "expired": "Platnost rezervace vypršela.",
+    "restart": "Začít nové hledání"
+  },
+  "steps": {
+    "label": "Kroky rezervace",
+    "search": "Spoj",
+    "passengers": "Cestující",
+    "review": "Kontrola",
+    "payment": "Platba",
+    "done": "Jízdenka"
+  },
+  "passengers": {
+    "title": "Údaje cestujících",
+    "adult": "Dospělý {n}",
+    "child": "Dítě {n}",
+    "firstName": "Jméno",
+    "lastName": "Příjmení",
+    "phone": "Telefon",
+    "phoneHint": "Ukrajinské (+380) nebo české (+420) mobilní číslo",
+    "additionalPhone": "Další telefon (nepovinné)",
+    "email": "E-mail",
+    "emailHint": "Na tuto adresu pošleme jízdenky.",
+    "dateOfBirth": "Datum narození",
+    "discount": "Sleva",
+    "noDiscount": "Bez slevy",
+    "cardNumber": "Číslo věrnostní karty",
+    "passportNote": "Jméno, příjmení a datum narození musí odpovídat pasu.",
+    "promoNote": "Na tento spoj už platí akční cena, osobní slevy se proto neuplatňují.",
+    "pricePerPassenger": "{price} za cestujícího",
+    "submit": "Pokračovat ke kontrole",
+    "required": "Vyplňte prosím toto pole.",
+    "invalidPhone": "Zadejte ukrajinské (+380…) nebo české (+420…) mobilní číslo.",
+    "invalidEmail": "Zadejte platnou e-mailovou adresu.",
+    "invalidDate": "Zadejte platné datum narození.",
+    "latinOnly": "Pouze latinská písmena (A–Z), mezery, pomlčky nebo apostrofy.",
+    "tooShort": "Zadejte alespoň {min} písmena.",
+    "notBookable": "Platnost rezervace vypršela nebo není vybrán spoj."
+  },
+  "review": {
+    "title": "Zkontrolujte rezervaci",
+    "trip": "Cesta",
+    "dates": "Termín",
+    "passengers": "Cestující",
+    "total": "Celkem",
+    "chargeNote": "Platíte v ukrajinských hřivnách (UAH); částku uvidíte v dalším kroku.",
+    "edit": "Upravit cestující",
+    "pay": "Přejít k platbě",
+    "starting": "Připravujeme platbu…",
+    "terms": "Pokračováním souhlasíte s přepravním řádem."
+  },
+  "payment": {
+    "title": "Platba",
+    "demoNote": "Toto je simulovaná platební stránka. Žádné peníze se nestrhnou a údaje o kartě nejsou potřeba.",
+    "amount": "K zaplacení",
+    "pay": "Zaplatit {amount}",
+    "decline": "Odmítnout platbu",
+    "processing": "Zpracováváme…",
+    "noCheckout": "Žádná platba neprobíhá. Začněte prosím nové hledání.",
+    "unsupported": "Tento způsob platby není v demu k dispozici."
+  },
+  "success": {
+    "title": "Rezervace je potvrzena",
+    "ticketNumber": "Číslo jízdenky {number}",
+    "emailNote": "Jízdenky jsme vám poslali i e-mailem (v demu e-maily končí v testovací schránce).",
+    "trip": "Cesta",
+    "dates": "Termín",
+    "passengers": "Cestující",
+    "paid": "Zaplaceno",
+    "download": "Stáhnout jízdenky (PDF)",
+    "downloading": "Připravujeme soubor…",
+    "bookAnother": "Rezervovat další cestu",
+    "notReady": "Jízdenka se ještě vystavuje. Zkuste to prosím za chvíli."
+  },
+  "failed": {
+    "title": "Platba neproběhla",
+    "text": "Nebyly strženy žádné peníze a nebyla rezervována žádná místa.",
+    "tryAgain": "Hledat znovu"
+  },
+  "home": {
+    "hero": {
+      "title": "Autobusy mezi Ukrajinou a Českou republikou",
+      "text": "Pohodlné autobusy z Kyjeva, Lvova a západní Ukrajiny do Prahy, Brna, Ostravy a Plzně — a zpět. Rezervace online za pár minut.",
+      "phones": "Zavolejte nám"
+    },
+    "advantages": {
+      "title": "V autobuse",
+      "items": {
+        "wifi": "Wi-Fi",
+        "screens": "Obrazovky a zábava",
+        "sockets": "Zásuvky",
+        "climate": "Klimatizace",
+        "lighting": "Osvětlení a ventilace",
+        "seats": "Polohovatelná sedadla",
+        "footrest": "Opěrky nohou",
+        "luggage": "Velký zavazadlový prostor",
+        "toilet": "Toaleta",
+        "payment": "Platba online nebo v kanceláři"
+      }
+    },
+    "fleet": {
+      "title": "Náš vozový park",
+      "year": "Rok",
+      "emission": "Motor",
+      "seats": "Míst",
+      "class": "Třída",
+      "note": "Vozový park je ilustrativní: Busora je demo společnost."
+    },
+    "popular": {
+      "title": "Oblíbené destinace",
+      "more": "Jízdní řád a ceny",
+      "book": "Rezervovat"
+    },
+    "about": {
+      "title": "O společnosti Busora",
+      "lead": "Busora provozuje pravidelné autobusové spoje mezi Ukrajinou a Českou republikou: dvě linky, čtyři směry, třináct měst. Tento web je vzdělávací projekt, který ukazuje, jak funguje rezervace autobusových jízdenek od hledání až po jízdenku — samotná společnost je fiktivní.",
+      "readMore": "Číst dál",
+      "readLess": "Zobrazit méně",
+      "why": {
+        "title": "Proč cestovat s Busora",
+        "items": [
+          "Přímé autobusy bez přestupů mezi Ukrajinou a Českem.",
+          "Pevný jízdní řád se spoji ve stanovené dny v týdnu.",
+          "Slevy pro děti, studenty, seniory a skupiny.",
+          "Jízdenky e-mailem v ukrajinštině, češtině nebo angličtině."
+        ]
+      },
+      "howToBook": {
+        "title": "Jak rezervovat jízdenku",
+        "steps": [
+          "Vyberte, odkud a kam cestujete, datum a počet cestujících.",
+          "Vyberte spoj a zadejte údaje cestujících.",
+          "Zkontrolujte rezervaci a zaplaťte online.",
+          "Stáhněte si jízdenky — pošleme vám je i e-mailem."
+        ]
+      },
+      "border": {
+        "title": "Přechod hranice",
+        "items": [
+          "Občané Ukrajiny s biometrickým pasem mohou v EU pobývat bez víza až 90 dní v jakémkoli 180denním období; pro držitele dočasné ochrany platí vlastní pravidla.",
+          "Mějte u sebe pas, jízdenku a u dětí cestujících bez obou rodičů potřebný souhlas.",
+          "Kontrola na hranici může trvat několik hodin, časy příjezdu jsou proto orientační.",
+          "Před cestou si ověřte celní limity pro hotovost, tabák, alkohol a potraviny."
+        ]
+      },
+      "czechia": {
+        "title": "Cestování po České republice",
+        "text": "Prahu, Brno, Ostravu a Plzeň spojují rychlé vlaky a autobusy a městskou dopravu snadno zaplatíte bezkontaktně. Měnou je česká koruna (CZK); karty se přijímají téměř všude."
+      }
+    }
+  },
+  "routesPage": {
+    "title": "Autobusové trasy",
+    "intro": "Všechny dvojice měst, které obsluhujeme, s cenami a dny odjezdů. Vyberte trasu a rezervujte.",
+    "filterFrom": "Místo odjezdu",
+    "filterTo": "Místo příjezdu",
+    "filterDay": "Den odjezdu",
+    "anyCity": "Jakékoli město",
+    "anyDay": "Jakýkoli den",
+    "reset": "Zrušit filtry",
+    "route": "Trasa",
+    "price": "Jednosměrná / zpáteční",
+    "daysFromUa": "Z Ukrajiny",
+    "daysFromCz": "Z Česka",
+    "duration": "Doba jízdy",
+    "empty": "Filtrům neodpovídá žádná trasa.",
+    "book": "Rezervovat",
+    "alsoTitle": "Spoje podle měst",
+    "toCountry": "{city} → {country}",
+    "infoTitle": "Autobusem mezi Ukrajinou a Českem",
+    "info": [
+      "Autobus je nejjednodušší způsob, jak cestovat mezi oběma zeměmi: bez přestupů, s velkorysým limitem zavazadel a se zastávkami blízko center měst.",
+      "Autobusy z Ukrajiny odjíždějí ráno a do Česka přijíždějí druhý den ráno; zpáteční spoje odjíždějí večer."
+    ]
+  },
+  "schedulePage": {
+    "title": "Jízdní řád",
+    "line": "Linka",
+    "lineName": "Linka {n}: {name}",
+    "city": "Město",
+    "stop": "Zastávka",
+    "departure": "Odjezd",
+    "arrival": "Příjezd",
+    "note": "Časy jsou místní. Časy příjezdu jsou orientační a závisí na přechodu hranice."
+  },
+  "faresPage": {
+    "title": "Ceník",
+    "intro": "Ceny z Ukrajiny jsou v hřivnách (UAH), z České republiky v korunách (CZK). V každé buňce: jednosměrná / zpáteční.",
+    "line": "Linka",
+    "fromTo": "Kam ↓ / Odkud →",
+    "discountsTitle": "Slevy",
+    "who": "Pro koho",
+    "discount": "Sleva",
+    "groups": {
+      "children": "Děti",
+      "adults": "Dospělí",
+      "both": "Všichni",
+      "discount-card": "Věrnostní karty"
+    },
+    "discountsNote": "Osobní slevy neplatí pro akční jízdenky. Mějte u sebe doklad, který nárok na slevu prokazuje.",
+    "baggageTitle": "Zavazadla",
+    "baggage": [
+      "V ceně: 2 kusy do 60 × 40 × 40 cm o celkové hmotnosti do 50 kg, včetně příručního zavazadla do 5 kg.",
+      "Děti do 12 let: 1 kus do 25 kg.",
+      "Další zavazadla, je-li místo: 50 Kč za kg nebo ekvivalent v UAH."
+    ]
+  },
+  "rulesPage": {
+    "title": "Přepravní řád",
+    "contents": "Obsah",
+    "intro": "Tento řád je součástí veřejné nabídky společnosti Busora s.r.o., fiktivní společnosti tohoto vzdělávacího projektu. Odpovídá podmínkám vytištěným na každé jízdence.",
+    "sections": {
+      "general": {
+        "title": "Obecná ustanovení",
+        "items": [
+          "Cestující odpovídá za dodržení pasových, vízových, celních a migračních předpisů.",
+          "Cestující mladší 18 let, kteří cestují bez rodičů, potřebují notářsky ověřený souhlas rodičů nebo zákonných zástupců.",
+          "Dopravce může odmítnout přepravit cestujícího pod vlivem alkoholu, se zjevnými příznaky nemoci nebezpečné pro ostatní nebo s nebezpečným chováním.",
+          "Dopravce neodpovídá za zpoždění z příčin, které nemůže ovlivnit: počasí, fronty na hranici, opravy silnic nebo zásahy státních orgánů.",
+          "Stížnosti na služby se přijímají písemně."
+        ]
+      },
+      "carrier": {
+        "title": "Povinnosti dopravce",
+        "items": [
+          "Přistavit autobus k nástupu včas a odjet podle jízdního řádu.",
+          "Dopravit cestující a jejich zavazadla do cíle.",
+          "Zajistit bezpečnou přepravu a kvalitní služby na palubě.",
+          "Udržovat autobus v dobrém technickém a hygienickém stavu.",
+          "Poskytovat cestujícím pravdivé informace o cestě."
+        ]
+      },
+      "passenger": {
+        "title": "Povinnosti cestujícího",
+        "items": [
+          "Dostavit se k nástupu nejpozději 30 minut před odjezdem.",
+          "Předložit platný pas a u zlevněné jízdenky doklad o nároku na slevu.",
+          "Uschovat jízdenku do konce cesty a na požádání ji předložit.",
+          "Mít vízové a migrační doklady potřebné pro cestu.",
+          "Včas se vracet do autobusu při zastávkách na trase.",
+          "Udržovat v autobuse čistotu a šetrně zacházet s jeho vybavením."
+        ]
+      },
+      "rights": {
+        "title": "Práva cestujícího",
+        "items": [
+          "Bezpečná a pohodlná přeprava.",
+          "Přeprava zavazadel v rámci limitu.",
+          "Informace o jízdním řádu, cenách a pravidlech.",
+          "Vrácení peněz za nevyužitou jízdenku za níže uvedených podmínek."
+        ]
+      },
+      "prohibited": {
+        "title": "V autobuse je zakázáno",
+        "items": [
+          "Kouřit, včetně elektronických cigaret.",
+          "Pít alkohol.",
+          "Převážet nebezpečné, hořlavé nebo zakázané předměty.",
+          "Rušit ostatní cestující nebo řidiče."
+        ]
+      },
+      "tickets": {
+        "title": "Jízdenky",
+        "items": [
+          "Jízdenka je na jméno a nelze ji převést na jinou osobu.",
+          "Akční jízdenky a jízdenky s otevřeným datem se nevracejí.",
+          "Jízdenka s otevřeným datem návratu platí 6 měsíců od první cesty; vrátit se lze jakýmkoli spojem s volnými místy.",
+          "Poruší-li cestující vízová pravidla, může dopravce přepravu odmítnout bez vrácení peněz."
+        ]
+      },
+      "refunds": {
+        "title": "Vrácení peněz za nevyužitou jízdenku",
+        "text": "Zrušíte-li cestu, vrátíme cenu jízdenky po odečtení poplatku, který závisí na době zrušení:",
+        "when": "Zrušení",
+        "fee": "Poplatek",
+        "rows": [
+          {
+            "when": "Více než 30 dní před odjezdem",
+            "fee": "10 % ceny jízdenky"
+          },
+          {
+            "when": "Více než 72 hodin před odjezdem",
+            "fee": "25 % ceny jízdenky"
+          },
+          {
+            "when": "24 až 72 hodin před odjezdem",
+            "fee": "50 % ceny jízdenky"
+          },
+          {
+            "when": "Méně než 24 hodin před odjezdem",
+            "fee": "100 % ceny jízdenky"
+          }
+        ]
+      },
+      "baggage": {
+        "title": "Zavazadla",
+        "items": [
+          "Jízdenka zahrnuje 2 kusy zavazadel do 60 × 40 × 40 cm o celkové hmotnosti do 50 kg, včetně příručního zavazadla do 5 kg.",
+          "Dětská jízdenka (do 12 let) zahrnuje 1 kus zavazadla do 25 kg.",
+          "Další zavazadla se přepravují, je-li v zavazadlovém prostoru místo, za 50 Kč za kg nebo ekvivalent v UAH podle kurzu v den platby.",
+          "Cestující a jejich zavazadla jsou po dobu cesty pojištěni (v demu fiktivní pojišťovnou)."
+        ]
+      }
+    }
+  },
+  "contactsPage": {
+    "title": "Kontakty",
+    "note": "Všechny kontaktní údaje jsou fiktivní: Busora je vzdělávací demo projekt.",
+    "phonesUa": "Telefony na Ukrajině",
+    "phonesCz": "Telefony v České republice",
+    "localTime": "Místní čas {time}",
+    "office": "Hlavní kancelář",
+    "address": "Adresa",
+    "hours": "Otevírací doba",
+    "email": "E-mail",
+    "open": "Nyní otevřeno",
+    "closed": "Nyní zavřeno"
+  },
+  "attributionsPage": {
+    "title": "Autoři fotografií",
+    "intro": "Fotografie na tomto webu pocházejí z Wikimedia Commons a jsou použity v souladu s jejich licencemi.",
+    "by": "autor: {author}",
+    "source": "Zdroj"
+  },
+  "notFound": {
+    "title": "Stránka nenalezena",
+    "home": "Na úvodní stránku"
+  }
+}

@@ -1,0 +1,226 @@
+/*
+ * Deliberately plain: readable defaults and layout only. The visual design is
+ * applied in Phase 10 from the reference.
+ */
+:root {
+  --brand-blue: #007bb7;
+  --brand-green: #2ca04d;
+  --text: #1c1f24;
+  --muted: #5b6370;
+  --border: #d4d9e0;
+  --surface: #f5f7fa;
+  --danger: #b42318;
+  --max-width: 72rem;
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: #fff;
+}
+
+a {
+  color: var(--brand-blue);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 60vh;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+fieldset {
+  border: 1px solid var(--border);
+  margin: 0 0 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+button,
+.button {
+  cursor: pointer;
+  padding: 0.4rem 0.9rem;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+}
+
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.demo-banner {
+  margin: 0;
+  padding: 0.4rem 1rem;
+  background: #fff4ce;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.site-header,
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: center;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+}
+
+.site-header {
+  justify-content: space-between;
+}
+
+.site-footer {
+  align-items: flex-start;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.site-footer h2 {
+  font-size: 1rem;
+}
+
+.site-footer ul,
+.site-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.site-nav a[aria-current='page'] {
+  font-weight: 700;
+}
+
+.brand {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+
+.section {
+  margin: 2.5rem 0;
+}
+
+ul.grid {
+  list-style: none;
+  padding: 0;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+}
+
+.card {
+  border: 1px solid var(--border);
+  padding: 1rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.9rem;
+  margin: 0.2rem 0 0;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.steps ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+}
+
+.steps [aria-current='step'] {
+  font-weight: 700;
+}
