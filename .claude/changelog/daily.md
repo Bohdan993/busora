@@ -499,3 +499,32 @@
   - Noted: Docker Desktop restarted once during the rehearsal (two MySQL
     stacks plus the 2 GB API image). The demo containers came back on their
     own (`restart: unless-stopped`); the dev stack had to be started again.
+- Phase 11 went live (2026-10-31): https://busora.pp.ua, private
+  admin.busora.pp.ua, password-protected inbox.busora.pp.ua.
+  - [DECISION] With the owner: simplified to the original Busreisen model.
+    No separate CI and no image registry; `.github/workflows/deploy.yml`
+    builds the three images on a PR into `main`, and a merge into `main`
+    runs `bin/ci-deploy.sh` (SSH as `deploy`; the server pulls `main`,
+    `docker compose up -d --build`, migrations). Skipped while `DEMO_HOST`
+    is unset. `ci.yml` and `deploy-demo.yml` are gone; checks run locally.
+  - Server: new OCI instance `busora-demo` (A1.Flex arm64, 2 OCPU / 12 GB,
+    Oracle Linux 9, 130.61.31.85) beside the Busreisen staging, which stays
+    untouched. firewalld + Docker CE + git; `/opt/busora` is the checkout;
+    `infra/demo.env` and `~deploy/inbox-password` are mode 600. The deploy
+    key is `restrict`-ed in `authorized_keys`; its host key is pinned in the
+    `DEMO_SSH_KNOWN_HOSTS` secret.
+  - Domain `busora.pp.ua` at NIC.UA (A records for @, admin, inbox).
+    Let's Encrypt certificates obtained on the first start. The NIC.UA name
+    server order expires 2027-01-31 and the domain 2027-10-31; autorenewal
+    was off.
+  - Verified live: routing and blocks, HTTPS/HTTP3, noindex, inbox and admin
+    logins (checked on the server, secrets never left it), and the four
+    Playwright tests (`E2E_BASE_URL=https://busora.pp.ua`) with PDFs, emails
+    and the ZIP download.
+  - Fixed on the way: CI generated 64-character seed passwords (seeder max
+    32); MySQL's first start fooled the socket health check, so the first
+    deploy's migrations failed (now a TCP ping); production logged every SQL
+    statement (now off); the E2E payment step needed more than 5 s on ARM.
+  - Noted: the API starts Chrome with `--single-process --no-zygote`.
+    Current Google Chrome crashes with these flags (the old CI's failure);
+    the demo's Debian Chromium 156 renders fine with them.

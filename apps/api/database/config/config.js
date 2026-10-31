@@ -51,8 +51,8 @@ const config = {
     port: Number(process.env.DB_PORT) || 3306,
     dialect: process.env.DB_DIALECT,
     seederStorage: 'sequelize',
-    logging: (msg) =>
-      console.log(msg, '(Date: ' + new Date().toUTCString() + ')')
+    // No SQL in production logs: statements can carry passengers' details
+    logging: false
   }
 };
 

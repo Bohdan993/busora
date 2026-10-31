@@ -9,6 +9,9 @@ import uk from '../messages/uk.json';
 const PRAHA = '8';
 const KYIV = '1';
 const CHILD_5_TO_11 = '3'; // seeded discount id
+// Paying renders every passenger's PDF ticket before the success page; on the
+// demo server's ARM CPU that takes several seconds
+const PAYMENT_TIMEOUT_MS = 30_000;
 
 const LOCALES = [
   { locale: 'uk', t: uk },
@@ -99,7 +102,9 @@ for (const { locale, t } of LOCALES) {
     await page.getByRole('button', { name: /₴|UAH/ }).click();
 
     // ── Ticket ────────────────────────────────────────────────────────────
-    await expect(page).toHaveURL(new RegExp(`/${locale}/booking/success`));
+    await expect(page).toHaveURL(new RegExp(`/${locale}/booking/success`), {
+      timeout: PAYMENT_TIMEOUT_MS
+    });
     await expect(
       page.getByRole('heading', { name: t.success.title })
     ).toBeVisible();
@@ -183,7 +188,9 @@ test('a round trip on days without buses picks the nearest outbound, then return
   await page.getByRole('button', { name: 'Go to payment' }).click();
   await page.getByRole('button', { name: /^Pay / }).click();
 
-  await expect(page).toHaveURL(/\/en\/booking\/success/);
+  await expect(page).toHaveURL(/\/en\/booking\/success/, {
+    timeout: PAYMENT_TIMEOUT_MS
+  });
   await expect(
     page.getByRole('heading', { name: 'Your booking is confirmed' })
   ).toBeVisible();
