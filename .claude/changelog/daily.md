@@ -342,3 +342,84 @@
   - Left for later: the login/registration pages still use a default MUI
     theme of their own, and "demo admin login" for the public demo
     (showing credentials or not) is a Phase 11 decision.
+- Phase 9 complete (Next.js site, working but unstyled):
+  - [DECISION] Scope (agreed with the user):
+    - Page and section structure follows busreisen.com.ua, structure only:
+      every text, contact and photo is our own and fictional.
+    - The Playwright e2e runs locally only, not in CI.
+    - Photos are free-licensed (Wikimedia Commons).
+    - Flights run on set weekdays.
+    - No newsletter.
+  - API:
+    - Seed: the flights run on set weekdays. Line 1 runs KP Tue/Thu/Sat and
+      PK Wed/Fri/Sun; line 2 runs TP Mon/Wed/Fri and PT Tue/Thu/Sat. Each
+      inbound leaves the day its bus arrives. The Wednesday promo now covers
+      route 3 only.
+    - `GET /api/network` returns cities, lines × directions (stops with
+      place, time and `dayOffset`; weekdays derived from upcoming flights)
+      and all fares (UAH + CZK). It is cacheable for 5 min.
+    - `GET /api/discounts` lists every personal discount, including
+      seasonally inactive ones.
+    - The discount query moved to `discountService.findPersonalDiscounts`.
+  - Gotcha: `busflightprices` has no `id` column, so any Sequelize `include`
+    on it fails ("Unknown column busflightprices.id"). Query it raw and join
+    in code.
+  - Gotcha: `dayOffset` is inferred from wall-clock times (an earlier time
+    than the previous stop's means the next day). That is only valid while
+    no leg is 24 h or longer; this is documented in `networkService.js`.
+  - `apps/web`:
+    - Stack: Next.js 16.4 (create-next-app defaults, with Cache Components
+      and partial prefetching on), next-intl 4 (`/uk`, `/cs`, `/en`,
+      `src/proxy.ts`), TanStack Query, react-hook-form + zod 4,
+      openapi-fetch with types from `apps/api/openapi.json`
+      (`npm run api:types`), and Vitest.
+    - [DECISION] All API data loads in the browser through the `/api`
+      rewrite. Server components render only translated text, so pages
+      prerender and `next build` never needs the API (CI).
+  - Pages:
+    - Home: hero + search, amenities, fleet, popular destinations and the
+      about section.
+    - Routes (filters for both cities and weekday; "Book" prefills the
+      form), schedule and fares (per line), rules (TOC; refund fees and
+      baggage match the PDF terms), contacts (live Kyiv/Prague clocks,
+      open/closed), attributions, and a localised 404.
+    - Booking: results (plus the nearest-departures fallback, and outbound
+      then return for round trips), passengers, review, mock payment,
+      success (summary + ZIP), failed, and a session countdown.
+  - Bug found and fixed in the UI: the API's alternatives endpoint always
+    looks for buses originId → destinationId, so the return leg must ask
+    with the cities swapped. Without the swap a round trip "returned" on an
+    outbound bus. (`/available-dates` swaps for `backwards` itself.) An e2e
+    test covers this now.
+  - Gotchas with this Next.js version:
+    - `AGENTS.md` says to read the docs bundled in
+      `node_modules/next/dist/docs`, and they were needed: under Cache
+      Components `new Date()` is not allowed while prerendering. That is
+      why the footer year was dropped, and clocks and timers use
+      `useSyncExternalStore` (`useNow`).
+    - Exports of a `'use client'` module arrive in server components as
+      client references (the `NAV_ITEMS.map` crash), so shared constants
+      live in plain modules.
+    - The `react-hooks/set-state-in-effect` lint rule bans reading storage
+      in effects; `useBooking` uses `useSyncExternalStore`.
+    - `getByLabel` on a `<label>` that wraps a `<select>` includes the
+      option texts, so match selects with `getByRole('combobox', { name })`.
+    - Installing Playwright 1.64's Chromium deleted build 1234, which the
+      home-folder Playwright 1.62.1 used by the scratch scripts needs. It
+      was reinstalled.
+  - Images: 8 cities + 4 coaches from Wikimedia Commons (CC BY, CC BY-SA or
+    CC0), 1280 px, under 600 KB each. A Setra photo with a small real
+    operator logo (BerlinMobil) was replaced with an unmarked Van Hool TX16.
+  - Checks:
+    - Vitest: 34 (network helpers, formatting, search query, passenger
+      payload, office hours, message key parity).
+    - Playwright: 4 locally. Full booking in uk and cs, decline, and a
+      round trip from alternatives through to the ticket.
+    - API: 121 unit tests and 19 integration checks.
+    - CI gets a `web` job: lint, format, API types match `openapi.json`,
+      typecheck, unit tests and build.
+  - Noted:
+    - In dev, the catch-all 404 logs a "could not validate instant"
+      diagnostic. It is harmless; the page answers 404 as intended.
+    - The passenger form's discount names include percentages (seed text),
+      which duplicates the percentage column on the fares page.
