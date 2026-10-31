@@ -65,7 +65,8 @@
     "PASSENGERS_MISSING": "Please enter the passenger details first.",
     "EXCHANGE_RATE_UNAVAILABLE": "Prices are temporarily unavailable. Please try again in a few minutes.",
     "SERVER_ERROR": "Something went wrong on our side. Please try again.",
-    "NETWORK_ERROR": "The booking service cannot be reached. Please check your connection and try again."
+    "NETWORK_ERROR": "The booking service cannot be reached. Please check your connection and try again.",
+    "TOO_MANY_REQUESTS": "Too many requests in a short time. Please wait a few minutes and try again."
   },
   "search": {
     "title": "Book a ticket",

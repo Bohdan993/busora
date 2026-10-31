@@ -198,6 +198,7 @@ module.exports = {
         enum: [
           ...Object.values(APIError.codes),
           'EXCHANGE_RATE_UNAVAILABLE',
+          'TOO_MANY_REQUESTS',
           'SERVER_ERROR'
         ],
         description:

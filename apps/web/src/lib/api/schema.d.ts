@@ -2939,7 +2939,7 @@ export interface components {
              * @description Machine-readable reason. Clients localise their message from this.
              * @enum {string}
              */
-            code: "BAD_REQUEST" | "VALIDATION_FAILED" | "NOT_FOUND" | "INVALID_DATES" | "NO_FLIGHTS" | "NO_FREE_SEATS" | "NO_ALTERNATIVES" | "SESSION_NOT_STARTED" | "FLIGHT_NOT_SELECTED" | "PASSENGERS_MISSING" | "EXCHANGE_RATE_UNAVAILABLE" | "SERVER_ERROR";
+            code: "BAD_REQUEST" | "VALIDATION_FAILED" | "NOT_FOUND" | "INVALID_DATES" | "NO_FLIGHTS" | "NO_FREE_SEATS" | "NO_ALTERNATIVES" | "SESSION_NOT_STARTED" | "FLIGHT_NOT_SELECTED" | "PASSENGERS_MISSING" | "EXCHANGE_RATE_UNAVAILABLE" | "TOO_MANY_REQUESTS" | "SERVER_ERROR";
             /** @description Developer-facing text, not localised */
             message: string;
             /** @description Details: a list of `{ field, message }` objects, or for passenger validation a map of field → localised messages. */

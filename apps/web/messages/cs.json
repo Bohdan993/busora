@@ -65,7 +65,8 @@
     "PASSENGERS_MISSING": "Nejprve zadejte údaje cestujících.",
     "EXCHANGE_RATE_UNAVAILABLE": "Ceny jsou dočasně nedostupné. Zkuste to prosím za pár minut.",
     "SERVER_ERROR": "Něco se pokazilo. Zkuste to prosím znovu.",
-    "NETWORK_ERROR": "Rezervační služba je nedostupná. Zkontrolujte připojení a zkuste to znovu."
+    "NETWORK_ERROR": "Rezervační služba je nedostupná. Zkontrolujte připojení a zkuste to znovu.",
+    "TOO_MANY_REQUESTS": "Příliš mnoho požadavků v krátké době. Počkejte prosím několik minut a zkuste to znovu."
   },
   "search": {
     "title": "Rezervovat jízdenku",

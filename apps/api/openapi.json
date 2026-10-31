@@ -136,6 +136,7 @@
               "FLIGHT_NOT_SELECTED",
               "PASSENGERS_MISSING",
               "EXCHANGE_RATE_UNAVAILABLE",
+              "TOO_MANY_REQUESTS",
               "SERVER_ERROR"
             ],
             "description": "Machine-readable reason. Clients localise their message from this."
