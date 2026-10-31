@@ -225,3 +225,74 @@
   - Noted, not changed: the app hashes passwords with bcrypt cost 5 (weak);
     seeded users use 10.
   - Tests: 92 → 109.
+- Phase 7 complete (API contract for the Next.js frontend, tests, CI):
+  - [BREAKING] The public API is JSON only. `mode=html` is gone from cities,
+    search, alternatives and the passenger form, and the frontend pug views
+    are deleted (`full-ticket.pug` and the terms stay, for the PDFs). Also
+    removed: `GET /api/translations` (the web app owns its UI text),
+    `POST /tickets/generate` (HTML) and the Postman collection.
+  - [DECISION] Public errors share one shape:
+    `{ status: 'fail', code, message, errors }`. `code` is machine-readable
+    (`NO_FLIGHTS`, `SESSION_NOT_STARTED`, `VALIDATION_FAILED`, …, listed in
+    `APIError.codes`); clients localise from it. The old 401/404 errors
+    rendered pug pages; their language files are deleted.
+    `passengers-form.js` and `ticket-list.js` keep only the validation
+    messages and the month names. Invalid travel dates are now 400
+    `INVALID_DATES` (were 404). Unknown `/api` paths return a JSON 404. A
+    500 no longer echoes the internal error message. Admin errors are
+    unchanged.
+  - New/changed JSON:
+    - `GET /passengers` now also returns `ticketPrice`, `currency`,
+      `showDiscounts` and the earlier `passengersInfo` (all of which only
+      the pug form had). Discounts come as `{ group, items: [{ id, name,
+      coef, minAge, maxAge }] }`. The `type=check` variant is gone (use
+      `GET /current-data`). It no longer requires existing passenger data.
+    - Alternatives come as `[{ date: ISO, flights }]`.
+    - `GET /current-data` returns `adults` and `children` as numbers.
+    - New `POST /tickets/summary` (signed payment result → ticket number,
+      route, dates, amount paid, passengers; ends the session).
+  - [SECURITY] `originId`/`destinationId` were interpolated into a raw
+    `JSON_CONTAINS` literal in the alternatives query (inherited). The search
+    routes now accept positive integers only (`validateCityIds`), and the
+    literal casts with `Number()`.
+  - [DECISION] Contract = OpenAPI. Public schemas live in
+    `config/swaggerBookingSchemas.js`; `npm run openapi` writes
+    `apps/api/openapi.json` (committed, prettier-ignored), and
+    `openapi:check` fails when it is stale. Verified that
+    `openapi-typescript` generates clean types from it. Type generation
+    itself belongs to `apps/web` (Phase 9).
+  - CORS: the web app will call the API through a Next.js `/api` rewrite
+    (same origin), so `.env.example` leaves `CORS_ORIGIN` empty; only the
+    admin needs an entry.
+  - [DECISION] `npm run test:integration` (`integration/booking.flow.js`, 17
+    checks). It runs the booking flow over HTTP against the in-process app:
+    real MySQL, Mailpit and puppeteer, in-memory sessions, mock payments,
+    fixed rate `CZK=2.08`. It checks prices, the UAH amount, 3 PDFs on
+    disk, seats −3, idempotent repeat, summary, ZIP, email with 3
+    attachments, declined payment and the error shapes. It deletes its
+    tickets afterwards via `deleteTicketCascade` (seats restored). No
+    supertest: `app.listen(0)` + `fetch` is enough. Not matched by
+    `npm test`'s default globs.
+  - Gotcha: `database/config/config.js` calls `dotenv.config()` itself, so
+    deleting an env var before requiring the models does not stick (it is
+    reloaded from `.env`). Set it to `''` instead. A deleted `REDIS_HOST`
+    left a Redis socket open and the test process never exited.
+  - `config.test` no longer logs every SQL query.
+  - CI: `.github/workflows/ci.yml`.
+    - API job: lint, `format:check`, `openapi:check`, unit tests, then
+      migrate + seed + integration tests against MySQL 8 and Mailpit service
+      containers. It runs as MySQL root because a service container cannot
+      take `--log-bin-trust-function-creators`, Chrome is the runner's
+      `/usr/bin/google-chrome`, and secrets are generated per run.
+    - Admin job: lint, `format:check`, `tsc --noEmit` and the CRA build
+      (`CI=true`).
+    - Simulated locally on a fresh `busora_ci` database as root with
+      `NODE_ENV=test`: migrate, seed and 17/17 pass. The admin passes all
+      four. No GitHub remote exists yet, so the workflow has not run on
+      Actions.
+  - Gotcha: on Windows `core.autocrlf=true` checks files out with CRLF and
+    `prettier --check` then flags them. Git stores LF, so CI is clean. Use
+    `--end-of-line auto` to check locally.
+  - Noted, not changed: the passenger form's `discount-name-N` in the session
+    is always the Ukrainian name (`passengerService.js` picks `uk_UA`).
+  - Tests: 109 → 114 unit tests, plus 17 integration checks.
