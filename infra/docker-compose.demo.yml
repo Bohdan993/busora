@@ -1,10 +1,11 @@
 # Busora public demo: the whole stack on one server, behind Caddy.
 #
-#   docker compose --env-file demo.env -f docker-compose.demo.yml pull
-#   docker compose --env-file demo.env -f docker-compose.demo.yml up -d
+# The server builds the images from this checkout; bin/ci-deploy.sh does it on
+# every merge to main. From the repository root:
+#   docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml up -d --build
 #
 # First start, and whenever you want a clean slate (migrate + seed from empty):
-#   docker compose --env-file demo.env -f docker-compose.demo.yml \
+#   docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml \
 #     run --rm reset node scripts/demoReset.js
 #
 # Only Caddy publishes ports. The runbook is infra/DEMO.md.
@@ -16,10 +17,10 @@ x-api-env: &api-env
   # Admin activation links point at the admin host, whose /api goes to the API
   API_URL: https://${DEMO_ADMIN_HOST:?}/api
   ADMIN_URL: https://${DEMO_ADMIN_HOST:?}
-  CORS_ORIGIN: ''
+  CORS_ORIGIN: ""
   CORS_ORIGIN_ADMIN: https://${DEMO_ADMIN_HOST:?}
-  DEV_HTTPS_KEY_PATH: ''
-  DEV_HTTPS_CERT_PATH: ''
+  DEV_HTTPS_KEY_PATH: ""
+  DEV_HTTPS_CERT_PATH: ""
   DB_HOST: mysql
   DB_PORT: 3306
   DB_NAME: ${DB_NAME:-busora_demo}
@@ -27,7 +28,7 @@ x-api-env: &api-env
   DB_PASS: ${DB_PASS:?set DB_PASS in demo.env}
   DB_DIALECT: mysql
   SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in demo.env}
-  SESSION_COOKIE_SECURE: 'true'
+  SESSION_COOKIE_SECURE: "true"
   JWT_SECRET_ACCESS: ${JWT_SECRET_ACCESS:?set JWT_SECRET_ACCESS in demo.env}
   JWT_SECRET_REFRESH: ${JWT_SECRET_REFRESH:?set JWT_SECRET_REFRESH in demo.env}
   EXCHANGE_RATE_PROVIDER: ${EXCHANGE_RATE_PROVIDER:-nbu}
@@ -38,7 +39,7 @@ x-api-env: &api-env
   # Every email lands in Mailpit: the demo has no route to real inboxes
   MAIL_HOST: mailpit
   MAIL_PORT: 1025
-  MAIL_SECURE: 'false'
+  MAIL_SECURE: "false"
   MAIL_USER: ${MAIL_USER:-noreply@busora.test}
   MAIL_PASS: ${MAIL_PASS:-mailpit}
   ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@busora.test}
@@ -68,9 +69,9 @@ services:
       MAILPIT_USER: ${MAILPIT_USER:?set MAILPIT_USER in demo.env}
       MAILPIT_PASSWORD_HASH: ${MAILPIT_PASSWORD_HASH:?set MAILPIT_PASSWORD_HASH in demo.env}
     ports:
-      - '80:80'
-      - '443:443'
-      - '443:443/udp'
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
       - ./Caddyfile.demo:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -83,15 +84,18 @@ services:
 
   web:
     <<: *restart
-    image: ${BUSORA_IMAGE_PREFIX:?}-web:${BUSORA_IMAGE_TAG:-latest}
+    build: ../apps/web
+    image: busora-demo-web
 
   admin:
     <<: *restart
-    image: ${BUSORA_IMAGE_PREFIX:?}-admin:${BUSORA_IMAGE_TAG:-latest}
+    build: ../apps/admin
+    image: busora-demo-admin
 
   api:
     <<: *restart
-    image: ${BUSORA_IMAGE_PREFIX:?set BUSORA_IMAGE_PREFIX in demo.env}-api:${BUSORA_IMAGE_TAG:-latest}
+    build: ../apps/api
+    image: busora-demo-api
     environment: *api-env
     volumes:
       - api_assets:/app/assets/tickets
@@ -107,11 +111,13 @@ services:
   # Resets the demo every night at 03:00 Kyiv time (scripts/demoReset.js)
   reset:
     <<: *restart
-    image: ${BUSORA_IMAGE_PREFIX:?}-api:${BUSORA_IMAGE_TAG:-latest}
-    command: ['node', 'scripts/demoReset.js', '--daily']
+    # The image the api service builds
+    image: busora-demo-api
+    pull_policy: never
+    command: ["node", "scripts/demoReset.js", "--daily"]
     environment:
       <<: *api-env
-      DEMO_RESET_ENABLED: 'true'
+      DEMO_RESET_ENABLED: "true"
     volumes:
       - api_assets:/app/assets/tickets
     depends_on:
@@ -136,7 +142,8 @@ services:
       - mysql_data:/var/lib/mysql
     healthcheck:
       # The password comes from the container's env, not this file
-      test: ['CMD-SHELL', 'mysqladmin ping -h localhost -p"$$MYSQL_ROOT_PASSWORD"']
+      test:
+        ["CMD-SHELL", 'mysqladmin ping -h localhost -p"$$MYSQL_ROOT_PASSWORD"']
       interval: 5s
       timeout: 5s
       retries: 20

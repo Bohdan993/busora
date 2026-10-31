@@ -36,46 +36,43 @@ network.
 
 ## One-time server setup
 
-1. A Linux server (amd64 or arm64; 2 GB RAM is enough, since images are built
-   on GitHub) with Docker Engine and the Compose plugin. Open ports 80 and 443
-   (TCP, plus UDP 443 for HTTP/3) and SSH; nothing else.
+Deploys follow one rule: `dev` ──PR──> `main` ──merge──> the server pulls
+`main` and rebuilds the stack ([.github/workflows/deploy.yml](../.github/workflows/deploy.yml),
+[bin/ci-deploy.sh](../bin/ci-deploy.sh)). A pull request into `main` only
+builds the three images as a check.
+
+1. A Linux server (amd64 or arm64; it builds the images, so 4 GB RAM or more)
+   with Docker Engine, the Compose plugin and git. Open ports 80 and 443 (TCP,
+   plus UDP 443 for HTTP/3) and SSH; nothing else.
 2. DNS: A (and AAAA) records for the three hostnames pointing at the server.
-3. A deploy user that may run Docker, and the folder (default `/opt/busora`):
+3. A `deploy` user that may run Docker, with the repository checked out at
+   `/opt/busora`:
 
    ```sh
    sudo mkdir -p /opt/busora && sudo chown deploy: /opt/busora
+   sudo -iu deploy git clone https://github.com/Bohdan993/busora.git /opt/busora
    ```
 
-4. In that folder, `demo.env` from [demo.env.example](demo.env.example), with
-   every empty value filled in (`openssl rand -hex 32` for the secrets; the
-   Mailpit hash as the template explains). `chmod 600 demo.env`.
-5. Registry access: the images are public-safe (no secrets inside), so the
-   simplest is to make the three `busora-*` packages public in GitHub's
-   package settings. To keep them private, log in once on the server with a
-   token that only has `read:packages`:
-   `docker login ghcr.io -u <github-user>`.
-6. GitHub settings, on the repository:
-   - Environment `demo` (optionally with required reviewers).
-   - Repository variables (not environment ones: the deploy job checks
-     `DEMO_HOST` before it enters the environment): `DEMO_USER`, optionally
-     `DEMO_DIR` (default `/opt/busora`) and `DEMO_PLATFORMS`. `linux/arm64`
-     alone builds on GitHub's native ARM runner (free for public repositories);
-     the default `linux/amd64,linux/arm64` emulates ARM on x86, which is much
-     slower. Add `DEMO_HOST` last: it switches deploys on.
-   - Secrets: `DEMO_SSH_KEY` (a private key for the deploy user, made only for
-     this) and `DEMO_SSH_KNOWN_HOSTS` (the output of `ssh-keyscan <host>`, so
-     the workflow refuses an unexpected server).
-7. First deploy: run the **Deploy demo** workflow by hand (or push to `main`).
-   It copies the Compose file and Caddyfile, pulls the images, migrates and
-   starts everything. Then fill the database once:
+4. `infra/demo.env` in that checkout, from [demo.env.example](demo.env.example),
+   with every empty value filled in (`openssl rand -hex 32` for the secrets;
+   the Mailpit hash as the template explains). `chmod 600 infra/demo.env`.
+   Git ignores it, and the deploy's `git reset --hard` leaves it alone.
+5. GitHub settings, on the repository:
+   - Environment `demo`, limited to the `main` branch.
+   - Repository variables: `DEMO_USER` (`deploy`), `DEMO_DIR`
+     (`/opt/busora`), and last `DEMO_HOST`: it switches deploys on.
+   - Environment secrets: `DEMO_SSH_KEY` (a private key for the deploy user,
+     made only for this) and `DEMO_SSH_KNOWN_HOSTS` (the output of
+     `ssh-keyscan <host>`, so the deploy refuses an unexpected server).
+6. First deploy: merge a pull request into `main`. The server builds and
+   starts everything and runs the migrations. Then fill the database once:
 
    ```sh
    cd /opt/busora
-   docker compose --env-file demo.env -f docker-compose.demo.yml \
-     run --rm reset node scripts/demoReset.js
+   docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml      run --rm reset node scripts/demoReset.js
    ```
 
-8. Check: the site loads over HTTPS and a booking goes through to the ticket
+7. Check: the site loads over HTTPS and a booking goes through to the ticket
    download; the admin login works; the inbox asks for its password and shows
    the booking email.
 
@@ -94,12 +91,13 @@ sudo dnf -y install dnf-plugins-core
 sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
 sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo systemctl enable --now docker
+sudo dnf -y install git
 sudo useradd --create-home deploy && sudo usermod -aG docker deploy
 ```
 
-- `demo.env` and `inbox-password` (the Mailpit login, `busora / <password>`)
-  live in `/opt/busora`, readable by `deploy` only. Read a value with
-  `sudo -u deploy grep SEED_ADMIN_PASSWORD /opt/busora/demo.env`.
+- `infra/demo.env` (in the checkout) and `~deploy/inbox-password` (the
+  Mailpit login, `busora / <password>`) are readable by `deploy` only. Read a
+  value with `sudo -u deploy grep SEED_ADMIN_PASSWORD /opt/busora/infra/demo.env`.
 - `deploy` logs in only with the GitHub Actions key, which is marked
   `restrict` in `authorized_keys` (no terminal, no forwarding; commands and
   `scp` still work). Administrators log in as `opc` with their own key.
@@ -107,16 +105,19 @@ sudo useradd --create-home deploy && sudo usermod -aG docker deploy
 ## Day to day
 
 Every command runs in `/opt/busora`; `dc` stands for
-`docker compose --env-file demo.env -f docker-compose.demo.yml`.
+`docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml`.
 
-- **Deploys** happen on every push to `main` once CI passes. Images are tagged
-  `latest` and with the commit SHA.
+- **Deploys** happen on every merge into `main`; the Actions log shows the
+  commit the server moved to.
 - **Logs:** `dc logs -f api` (also kept in the `api_logs` volume); the reset
   logs its runs under `dc logs reset`.
 - **Reset now:** `dc run --rm reset node scripts/demoReset.js`.
-- **Roll back:** `BUSORA_IMAGE_TAG=<older commit SHA> dc up -d`. Migrations
-  only ever add, so an older API runs on the newer schema; if not, reset.
-- **Change a setting:** edit `demo.env`, then `dc up -d`.
+- **Roll back:** revert the bad commit on `dev` and merge it into `main`, or
+  on the server `git checkout <older commit> && dc up -d --build` (the next
+  deploy returns to `main`). Migrations only ever add, so an older API runs
+  on the newer schema; if not, reset.
+- **Change a setting:** edit `infra/demo.env`, then `dc up -d`.
+- **Disk:** builds leave cache behind; `docker builder prune -f` frees it.
 
 ## Rehearse locally
 
@@ -125,16 +126,11 @@ names (Caddy gives them certificates from its own local authority, so the
 browser warns once).
 
 ```sh
-docker build -t busora-local-api apps/api
-docker build -t busora-local-web apps/web
-docker build -t busora-local-admin apps/admin
-cd infra
-cp demo.env.example demo.env
-# set BUSORA_IMAGE_PREFIX=busora-local, the hosts to demo.localhost,
-# admin.localhost and mail.localhost, and fill in the secrets
-docker compose --env-file demo.env -f docker-compose.demo.yml up -d
-docker compose --env-file demo.env -f docker-compose.demo.yml \
-  run --rm reset node scripts/demoReset.js
+cp infra/demo.env.example infra/demo.env
+# set the hosts to demo.localhost, admin.localhost and mail.localhost,
+# and fill in the secrets
+docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml up -d --build
+docker compose --env-file infra/demo.env -f infra/docker-compose.demo.yml \n  run --rm reset node scripts/demoReset.js
 ```
 
 The Playwright suite runs against it too:

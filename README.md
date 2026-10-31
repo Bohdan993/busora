@@ -22,7 +22,9 @@ Republic, in both directions.
 The demo runs the whole stack on one server behind Caddy: the site, a private
 admin panel and a password-protected Mailpit inbox. Payments are always
 simulated, emails never leave the server, and the data resets every night.
-After CI passes on `main`, GitHub Actions builds the images and deploys them.
+Merging `dev` into `main` deploys it: GitHub Actions logs in to the server,
+which pulls `main` and rebuilds the stack. A pull request into `main` checks
+that the three Docker images build.
 Setup, operations and a local rehearsal: [infra/DEMO.md](infra/DEMO.md).
 
 ## Run it locally
@@ -42,7 +44,7 @@ The public booking API speaks JSON only. Its contract is the OpenAPI spec in
 <http://localhost:5000/api-docs>. Every error has the same shape with a
 machine-readable `code`.
 
-In `apps/api` (CI runs the same on every push and pull request):
+Checks run locally. In `apps/api`:
 
 - `npm run lint` and `npm run format:check`
 - `npm test`: unit tests
@@ -51,8 +53,9 @@ In `apps/api` (CI runs the same on every push and pull request):
 - `npm run openapi`: regenerates `openapi.json` after an endpoint changes
   (`npm run openapi:check` fails while it is stale)
 
-In `apps/web`, CI runs lint, format, typecheck, unit tests and the build, and
-checks that the generated API types match `openapi.json`. The Playwright
-end-to-end test (`npm run test:e2e`) runs locally only.
+In `apps/web`: `npm run lint`, `npm run format:check`, `npm run typecheck`,
+`npm test` and `npm run build`; after an API change, `npm run api:types`
+regenerates the client types from `openapi.json`. The Playwright end-to-end
+test is `npm run test:e2e`.
 
 The implementation plan is in [.claude/docs/PLAN.md](.claude/docs/PLAN.md).

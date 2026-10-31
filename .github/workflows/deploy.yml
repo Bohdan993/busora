@@ -1,0 +1,59 @@
+# CI/CD — Busora demo
+#
+# Branch flow:
+#   dev ──PR──> main ──push──> deploy to the demo server (Oracle Cloud)
+#
+# A PR into main gets a build check (no deploy). A push (merge) into main runs
+# the deploy job: the server pulls main and rebuilds the stack itself, see
+# bin/ci-deploy.sh. One-time setup: infra/DEMO.md.
+
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Never run two deploys at once; let an in-flight deploy finish rather than
+# cancelling it half-way.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ---- PR gate: do the images build? --------------------------------------
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [api, web, admin]
+    steps:
+      - uses: actions/checkout@v5
+
+      # The same images the server builds on deploy: catches a broken
+      # Dockerfile, a failing npm ci or a failing production build before merge
+      - name: Docker build
+        run: docker build -t busora-${{ matrix.app }}:ci apps/${{ matrix.app }}
+
+  # ---- Deploy: the demo server --------------------------------------------
+  deploy:
+    # Skipped until DEMO_HOST is set (infra/DEMO.md)
+    if: github.event_name == 'push' && vars.DEMO_HOST != ''
+    runs-on: ubuntu-latest
+    environment: demo
+    steps:
+      - uses: actions/checkout@v5
+      - name: Deploy to the demo server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEMO_SSH_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEMO_HOST }}
+          DEPLOY_USER: ${{ vars.DEMO_USER }}
+          DEPLOY_APP_DIR: ${{ vars.DEMO_DIR }}
+          DEPLOY_BRANCH: main
+        run: bash ./bin/ci-deploy.sh
