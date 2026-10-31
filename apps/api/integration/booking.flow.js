@@ -412,3 +412,37 @@ test('errors share one JSON shape with a machine-readable code', async () => {
     'status'
   ]);
 });
+
+test('the network lists both lines with weekdays, stops and fares', async () => {
+  const call = createClient();
+  const res = await call('GET', '/network?languageCode=cs_CZ');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const { cities, lines, fares } = res.body.data;
+
+  assert.equal(cities.find((c) => c.id === PRAHA).name, 'Praha');
+  assert.equal(lines.length, 2);
+  const [outbound, inbound] = lines[0].directions;
+  // Kyiv → Prague leaves Tue/Thu/Sat; the bus returns the day it arrives
+  assert.deepEqual(outbound.weekdays, [2, 4, 6]);
+  assert.deepEqual(inbound.weekdays, [0, 3, 5]);
+  assert.equal(outbound.stops[0].cityId, KYIV);
+  const praha = outbound.stops.find((s) => s.cityId === PRAHA);
+  assert.equal(praha.kind, 'dropOff');
+  assert.equal(praha.dayOffset, 1);
+
+  const kyivPraha = fares.filter(
+    (f) => f.fromCityId === KYIV && f.toCityId === PRAHA
+  );
+  assert.deepEqual(kyivPraha.map((f) => f.currency).sort(), ['CZK', 'UAH']);
+  assert.ok(kyivPraha.every((f) => f.roundTrip > f.oneWay));
+});
+
+test('discounts are public, grouped and named in the requested language', async () => {
+  const call = createClient();
+  const res = await call('GET', '/discounts?languageCode=en_US');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const children = res.body.data.find((g) => g.group === 'children');
+  assert.ok(children.items.length > 0);
+  assert.ok(children.items.every((d) => d.name && d.coef > 0 && d.coef < 1));
+  assert.ok(!res.body.data.some((g) => g.group === 'bus-flights'));
+});

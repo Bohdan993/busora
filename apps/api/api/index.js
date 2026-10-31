@@ -74,6 +74,8 @@ const passengersRoute = require('@api/routes/passengers');
 const paymentRoute = require('@api/routes/payment');
 const ticketsRoute = require('@api/routes/tickets');
 const sessionDataRoute = require('@api/routes/sessionData');
+const networkRoute = require('@api/routes/network');
+const discountsRoute = require('@api/routes/discounts');
 // const insertDataRoute = require("@api/routes/insertDatainDB");
 const { handleError } = require('@middlewares/errorMiddlewares');
 const APIError = require('@exeptions/api-error');
@@ -217,6 +219,8 @@ app.use('/api/passengers', passengersRoute);
 app.use('/api/tickets', ticketsRoute);
 app.use('/api/payment', paymentRoute);
 app.use('/api/current-data', sessionDataRoute);
+app.use('/api/network', networkRoute);
+app.use('/api/discounts', discountsRoute);
 // app.use("/api/insert", insertDataRoute);
 
 app.use('/api/admin/auth', authRoute);

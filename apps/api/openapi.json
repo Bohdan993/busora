@@ -17,6 +17,10 @@
       "description": "Public city/country lookup"
     },
     {
+      "name": "Network",
+      "description": "Lines, schedule, fares and discounts for the site pages"
+    },
+    {
       "name": "Currencies",
       "description": "Currency lookup by abbreviation"
     },
@@ -959,6 +963,234 @@
           }
         }
       },
+      "NetworkStop": {
+        "type": "object",
+        "required": [
+          "kind",
+          "cityId",
+          "placeId",
+          "placeName",
+          "time",
+          "dayOffset"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "boarding",
+              "dropOff"
+            ],
+            "description": "Passengers board at boarding stops and leave at drop-off stops"
+          },
+          "cityId": {
+            "type": "integer",
+            "example": 1
+          },
+          "placeId": {
+            "type": "integer",
+            "example": 1
+          },
+          "placeName": {
+            "type": "string",
+            "example": "Kyiv Central Bus Station",
+            "nullable": true
+          },
+          "time": {
+            "type": "string",
+            "example": "07:00",
+            "description": "Local time, HH:MM"
+          },
+          "dayOffset": {
+            "type": "integer",
+            "example": 0,
+            "description": "Days after departure from the first stop (0 = same day)"
+          }
+        }
+      },
+      "NetworkDirection": {
+        "type": "object",
+        "required": [
+          "routeId",
+          "name",
+          "countryId",
+          "weekdays",
+          "stops"
+        ],
+        "properties": {
+          "routeId": {
+            "type": "integer",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "Kyiv - Prague",
+            "nullable": true
+          },
+          "countryId": {
+            "type": "integer",
+            "description": "Country the direction starts in"
+          },
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Departure days from the first stop, 0 = Sunday",
+            "example": [
+              2,
+              4,
+              6
+            ]
+          },
+          "stops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkStop"
+            }
+          }
+        }
+      },
+      "NetworkLine": {
+        "type": "object",
+        "required": [
+          "id",
+          "directions"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "directions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkDirection"
+            },
+            "description": "Outbound first (lower route id), then inbound"
+          }
+        }
+      },
+      "NetworkCity": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "country",
+          "currency"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 8
+          },
+          "name": {
+            "type": "string",
+            "example": "Praha",
+            "nullable": true
+          },
+          "country": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 2
+              },
+              "name": {
+                "type": "string",
+                "example": "Česko",
+                "nullable": true
+              }
+            }
+          },
+          "currency": {
+            "type": "object",
+            "required": [
+              "abbr",
+              "symbol"
+            ],
+            "description": "Currency fares from this city are shown in",
+            "properties": {
+              "abbr": {
+                "type": "string",
+                "example": "CZK",
+                "nullable": true
+              },
+              "symbol": {
+                "type": "string",
+                "example": "Kč",
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "Fare": {
+        "type": "object",
+        "required": [
+          "fromCityId",
+          "toCityId",
+          "currency",
+          "oneWay",
+          "roundTrip"
+        ],
+        "properties": {
+          "fromCityId": {
+            "type": "integer",
+            "example": 8
+          },
+          "toCityId": {
+            "type": "integer",
+            "example": 1
+          },
+          "currency": {
+            "type": "string",
+            "example": "CZK",
+            "nullable": true
+          },
+          "oneWay": {
+            "type": "number",
+            "example": 1590
+          },
+          "roundTrip": {
+            "type": "number",
+            "example": 2860
+          }
+        }
+      },
+      "Network": {
+        "type": "object",
+        "required": [
+          "cities",
+          "lines",
+          "fares"
+        ],
+        "properties": {
+          "cities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkCity"
+            }
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkLine"
+            }
+          },
+          "fares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Fare"
+            }
+          }
+        }
+      },
       "CitiesResponse": {
         "type": "object",
         "required": [
@@ -1124,6 +1356,39 @@
           },
           "data": {
             "$ref": "#/components/schemas/TicketSummary"
+          }
+        }
+      },
+      "NetworkResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Network"
+          }
+        }
+      },
+      "DiscountsResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OkStatus"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountGroup"
+            }
           }
         }
       },
@@ -1979,6 +2244,86 @@
           },
           "422": {
             "description": "VALIDATION_FAILED; errors maps each invalid field to messages in languageCode",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/network": {
+      "get": {
+        "summary": "The bus network for the routes, schedule and fares pages",
+        "description": "Cities, the lines with both directions (stops, times, the weekdays they run) and every fare in UAH and CZK. Public and cacheable; it does not touch the booking session.\n",
+        "tags": [
+          "Network"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The network",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown language code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discounts": {
+      "get": {
+        "summary": "Personal discounts, for the fares page",
+        "description": "Every personal discount, including those that are seasonally inactive today (their name says when). Booking offers only the currently valid ones, via GET /api/passengers.\n",
+        "tags": [
+          "Network"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "languageCode",
+            "schema": {
+              "$ref": "#/components/schemas/LanguageCode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discounts by passenger group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown language code",
             "content": {
               "application/json": {
                 "schema": {

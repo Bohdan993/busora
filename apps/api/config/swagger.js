@@ -21,6 +21,10 @@ const options = {
     servers: [{ url: 'http://localhost:5000', description: 'Local dev' }],
     tags: [
       { name: 'Cities', description: 'Public city/country lookup' },
+      {
+        name: 'Network',
+        description: 'Lines, schedule, fares and discounts for the site pages'
+      },
       { name: 'Currencies', description: 'Currency lookup by abbreviation' },
       { name: 'Bus Flights', description: 'Flight search and selection' },
       { name: 'Passengers', description: 'Passenger form and validation' },

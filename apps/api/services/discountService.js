@@ -1,6 +1,33 @@
 /** @format */
 
+const { Op } = require('sequelize');
+const {
+  discount: Discount,
+  discountattributes: DiscountAttributes
+} = require('@database/models/index');
 const { transformDateToShortString } = require('@helpers');
+const constants = require('@helpers/constants.js');
+
+/**
+ * Personal discounts (every group except the per-flight promo) with names in
+ * one language, in display order, grouped as [group, discounts] pairs.
+ */
+async function findPersonalDiscounts(languageId) {
+  const discounts = await Discount.findAll({
+    attributes: ['id', 'coef', 'inactivePeriod', 'group', 'maxAge', 'minAge'],
+    where: { group: { [Op.not]: constants.BUS_FLIGHT } },
+    include: [
+      {
+        model: DiscountAttributes,
+        as: 'discountattrs',
+        attributes: ['name', 'languageId'],
+        where: { languageId: { [Op.eq]: languageId } }
+      }
+    ],
+    order: [['order', 'ASC']]
+  });
+  return mapDiscounts(discounts.map((discount) => discount.toJSON()));
+}
 
 function mapDiscounts(discounts) {
   const uniq = {};
@@ -90,6 +117,7 @@ function toPassengerFormDiscounts(groupedDiscounts) {
 }
 
 module.exports = {
+  findPersonalDiscounts,
   mapDiscounts,
   filterByDateDiscounts,
   toPassengerFormDiscounts

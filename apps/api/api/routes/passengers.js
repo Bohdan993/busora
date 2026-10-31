@@ -1,14 +1,10 @@
 const { Router } = require('express');
 const router = Router();
 const { Op } = require('sequelize');
-const {
-  language: Language,
-  discount: Discount,
-  discountattributes: DiscountAttributes
-} = require('@database/models/index');
+const { language: Language } = require('@database/models/index');
 const { loadLanguageFile } = require('@helpers');
 const {
-  mapDiscounts,
+  findPersonalDiscounts,
   filterByDateDiscounts,
   toPassengerFormDiscounts
 } = require('@services/discountService');
@@ -56,8 +52,6 @@ router.get(
   [checkIfSessionIsStarted, checkIfBusFlightSelected],
   async (req, res, next) => {
     try {
-      let discounts = [];
-
       const { languageCode = 'uk_UA' } = req?.query ?? {};
 
       const {
@@ -76,38 +70,10 @@ router.get(
         }
       });
 
-      discounts = await Discount.findAll({
-        attributes: [
-          'id',
-          'coef',
-          'inactivePeriod',
-          'group',
-          'maxAge',
-          'minAge'
-        ],
-        where: {
-          group: {
-            [Op.not]: constants.BUS_FLIGHT
-          }
-        },
-        include: [
-          {
-            model: DiscountAttributes,
-            as: 'discountattrs',
-            attributes: ['name', 'languageId'],
-            where: {
-              languageId: {
-                [Op.eq]: lang?.id
-              }
-            }
-          }
-        ],
-        order: [['order', 'ASC']]
-      });
-
-      discounts = discounts?.map((discount) => discount?.toJSON());
-      discounts = mapDiscounts(discounts);
-      discounts = filterByDateDiscounts(discounts);
+      // Only discounts valid today can be chosen while booking
+      const discounts = filterByDateDiscounts(
+        await findPersonalDiscounts(lang?.id)
+      );
 
       req.session.busFlights = null;
       req.session.alternativeBusFlightsFrom = null;

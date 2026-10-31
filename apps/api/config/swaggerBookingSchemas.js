@@ -489,6 +489,110 @@ module.exports = {
       }
     }
   },
+  NetworkStop: {
+    type: 'object',
+    required: ['kind', 'cityId', 'placeId', 'placeName', 'time', 'dayOffset'],
+    properties: {
+      kind: {
+        type: 'string',
+        enum: ['boarding', 'dropOff'],
+        description:
+          'Passengers board at boarding stops and leave at drop-off stops'
+      },
+      cityId: { type: 'integer', example: 1 },
+      placeId: { type: 'integer', example: 1 },
+      placeName: nullable({
+        type: 'string',
+        example: 'Kyiv Central Bus Station'
+      }),
+      time: {
+        type: 'string',
+        example: '07:00',
+        description: 'Local time, HH:MM'
+      },
+      dayOffset: {
+        type: 'integer',
+        example: 0,
+        description: 'Days after departure from the first stop (0 = same day)'
+      }
+    }
+  },
+  NetworkDirection: {
+    type: 'object',
+    required: ['routeId', 'name', 'countryId', 'weekdays', 'stops'],
+    properties: {
+      routeId: { type: 'integer', example: 1 },
+      name: nullable({ type: 'string', example: 'Kyiv - Prague' }),
+      countryId: {
+        type: 'integer',
+        description: 'Country the direction starts in'
+      },
+      weekdays: {
+        type: 'array',
+        items: { type: 'integer', minimum: 0, maximum: 6 },
+        description: 'Departure days from the first stop, 0 = Sunday',
+        example: [2, 4, 6]
+      },
+      stops: { type: 'array', items: ref('NetworkStop') }
+    }
+  },
+  NetworkLine: {
+    type: 'object',
+    required: ['id', 'directions'],
+    properties: {
+      id: { type: 'integer', example: 1 },
+      directions: {
+        type: 'array',
+        items: ref('NetworkDirection'),
+        description: 'Outbound first (lower route id), then inbound'
+      }
+    }
+  },
+  NetworkCity: {
+    type: 'object',
+    required: ['id', 'name', 'country', 'currency'],
+    properties: {
+      id: { type: 'integer', example: 8 },
+      name: nullable({ type: 'string', example: 'Praha' }),
+      country: {
+        type: 'object',
+        required: ['id', 'name'],
+        properties: {
+          id: { type: 'integer', example: 2 },
+          name: nullable({ type: 'string', example: 'Česko' })
+        }
+      },
+      currency: {
+        type: 'object',
+        required: ['abbr', 'symbol'],
+        description: 'Currency fares from this city are shown in',
+        properties: {
+          abbr: nullable({ type: 'string', example: 'CZK' }),
+          symbol: nullable({ type: 'string', example: 'Kč' })
+        }
+      }
+    }
+  },
+  Fare: {
+    type: 'object',
+    required: ['fromCityId', 'toCityId', 'currency', 'oneWay', 'roundTrip'],
+    properties: {
+      fromCityId: { type: 'integer', example: 8 },
+      toCityId: { type: 'integer', example: 1 },
+      currency: nullable({ type: 'string', example: 'CZK' }),
+      oneWay: { type: 'number', example: 1590 },
+      roundTrip: { type: 'number', example: 2860 }
+    }
+  },
+  Network: {
+    type: 'object',
+    required: ['cities', 'lines', 'fares'],
+    properties: {
+      cities: { type: 'array', items: ref('NetworkCity') },
+      lines: { type: 'array', items: ref('NetworkLine') },
+      fares: { type: 'array', items: ref('Fare') }
+    }
+  },
   // Response envelopes, so generated client types name them
   CitiesResponse: okEnvelope({ type: 'array', items: ref('CityGroup') }),
   BusFlightsResponse: okEnvelope(
@@ -510,6 +614,11 @@ module.exports = {
   CheckoutResponse: okEnvelope(ref('Checkout'), { withSession: true }),
   MockCompletionResponse: okEnvelope(ref('MockCompletion')),
   TicketSummaryResponse: okEnvelope(ref('TicketSummary')),
+  NetworkResponse: okEnvelope(ref('Network')),
+  DiscountsResponse: okEnvelope({
+    type: 'array',
+    items: ref('DiscountGroup')
+  }),
   SessionOkResponse: {
     type: 'object',
     required: ['status', 'sessionExpiresTime'],
