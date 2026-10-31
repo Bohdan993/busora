@@ -5,22 +5,26 @@ import { SearchAutocomplete } from 'src/components/SearchAutocomplete';
 import { useDebounce } from 'src/helpers/hooks';
 import { useLazySearchPassengersQuery } from 'src/services/passenger';
 import { type PassengerOption } from 'src/types/passengers';
+import { PHONE_COUNTRIES, type CallingCode } from 'src/helpers/phone';
 
-// Only UA / DE are supported. The calling code lives in a separate select so it
+// Only UA / CZ are supported. The calling code lives in a separate select so it
 // can never be typed over or backspaced, and the national part is digits-only.
-const COUNTRIES = [
-  { code: 'UA', calling: '+380', flag: '🇺🇦' },
-  { code: 'DE', calling: '+49', flag: '🇩🇪' }
-] as const;
-
-type Calling = typeof COUNTRIES[number]['calling'];
+type Calling = CallingCode;
 
 // Split a stored E.164 value into { calling, national digits }. Defaults to UA.
 const splitPhone = (value: string): { calling: Calling; national: string } => {
   const v = value || '';
-  if (v.startsWith('+49')) return { calling: '+49', national: v.slice(3) };
-  if (v.startsWith('+380')) return { calling: '+380', national: v.slice(4) };
-  return { calling: '+380', national: v.replace(/\D/g, '') };
+  const country = PHONE_COUNTRIES.find((c) => v.startsWith(c.calling));
+  if (country) {
+    return {
+      calling: country.calling,
+      national: v.slice(country.calling.length)
+    };
+  }
+  return {
+    calling: PHONE_COUNTRIES[0].calling,
+    national: v.replace(/\D/g, '')
+  };
 };
 
 export interface PassengerSearchPhoneInputProps {
@@ -150,7 +154,7 @@ export const PassengerSearchPhoneInput = ({
         }}
         sx={{ width: 110, flexShrink: 0 }}
       >
-        {COUNTRIES.map((c) => (
+        {PHONE_COUNTRIES.map((c) => (
           <MenuItem key={c.code} value={c.calling}>
             {c.flag} {c.calling}
           </MenuItem>

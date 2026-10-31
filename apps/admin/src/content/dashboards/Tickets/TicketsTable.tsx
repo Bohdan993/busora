@@ -83,6 +83,7 @@ import {
 import {
   VALID_PAGE_SIZES,
   COLUMNS_DEFINITIONS,
+  ROUTE_SORT_OPTIONS,
   type CustomOrder
 } from './constants';
 import {
@@ -798,7 +799,7 @@ const TicketsTable: FC = () => {
           error: !!validationErrors?.[cell.id],
           helperText: validationErrors?.[cell.id],
           // Show which currency this amount is typed in — the ticket's currency
-          // (UAH → ₴, EUR → €, …). The write path sends it as that currency.
+          // (UAH → ₴, CZK → Kč, …). The write path sends it as that currency.
           InputProps: {
             endAdornment: (
               <InputAdornment position="end">
@@ -1340,62 +1341,20 @@ const TicketsTable: FC = () => {
           return [
             ...internalColumnMenuItems,
             <Divider key="divider-1" />,
-            <MenuItem
-              key={'item-1'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'ZD');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Запоріжжя - Швайнфурт
-              </ListItemText>
-            </MenuItem>,
-            <MenuItem
-              key={'item-2'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'DZ');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Швайнфурт - Запоріжжя
-              </ListItemText>
-            </MenuItem>,
-            <MenuItem
-              key={'item-3'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'ZK');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Запоріжжя - Карлсруе
-              </ListItemText>
-            </MenuItem>,
-            <MenuItem
-              key={'item-4'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'KZ');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Карлсруе - Запоріжжя
-              </ListItemText>
-            </MenuItem>
+            ...ROUTE_SORT_OPTIONS.map(({ key, label }) => (
+              <MenuItem
+                key={key}
+                onClick={() => {
+                  handleCustomSotring(column.id, key);
+                  closeMenu();
+                }}
+              >
+                <ListItemIcon>
+                  <SortIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Сортувати за маршрутом {label}</ListItemText>
+              </MenuItem>
+            ))
           ];
         },
         enableSorting: true,
@@ -1518,62 +1477,20 @@ const TicketsTable: FC = () => {
           return [
             ...internalColumnMenuItems,
             <Divider key="divider-1" />,
-            <MenuItem
-              key={'item-1'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'ZD');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Запоріжжя - Швайнфурт
-              </ListItemText>
-            </MenuItem>,
-            <MenuItem
-              key={'item-2'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'DZ');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Швайнфурт - Запоріжжя
-              </ListItemText>
-            </MenuItem>,
-            <MenuItem
-              key={'item-3'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'ZK');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Запоріжжя - Карлсруе
-              </ListItemText>
-            </MenuItem>,
-            <MenuItem
-              key={'item-4'}
-              onClick={() => {
-                handleCustomSotring(column.id, 'KZ');
-                closeMenu();
-              }}
-            >
-              <ListItemIcon>
-                <SortIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>
-                Сортувати за маршрутом Карлсруе - Запоріжжя
-              </ListItemText>
-            </MenuItem>
+            ...ROUTE_SORT_OPTIONS.map(({ key, label }) => (
+              <MenuItem
+                key={key}
+                onClick={() => {
+                  handleCustomSotring(column.id, key);
+                  closeMenu();
+                }}
+              >
+                <ListItemIcon>
+                  <SortIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Сортувати за маршрутом {label}</ListItemText>
+              </MenuItem>
+            ))
           ];
         },
         enableSorting: true,
@@ -3496,7 +3413,7 @@ const TicketsTable: FC = () => {
             ticketId: row.original.ticketId,
             passengerId: row.original.passengerId,
             childKey: row.original.childKey,
-            filename: `Benz_Express_Ticket_${row.original.ticketNumber}.pdf`
+            filename: `Busora_Ticket_${row.original.ticketNumber}.pdf`
           });
           closeMenu();
         }}

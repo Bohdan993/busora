@@ -1,3 +1,4 @@
+import { PHONE_PATTERN } from 'src/helpers/phone';
 import { isOneWayTicket } from 'src/helpers';
 import { type TicketPassenger, type Ticket } from 'src/types/tickets';
 import { type Passenger, type Child } from 'src/types/passengers';
@@ -19,10 +20,7 @@ function validateEmail(email: string) {
 }
 
 function validatePhone(phone: string) {
-  return (
-    !!phone.length &&
-    phone.toLowerCase().match(/^\+380([5-9][0-9]\d{7})$|^\+49(\d{10,11})$/)
-  );
+  return !!phone.length && PHONE_PATTERN.test(phone);
 }
 
 const REQUIRED_MSG = "Поле обов'язкове";

@@ -2,12 +2,10 @@ import { type AuthResponse } from 'src/types/auth';
 import { type ApiResponse } from 'src/types/apiResponse';
 // Or from '@reduxjs/toolkit/query' if not using the auto-generated hooks
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-// API base URL. Defaults to the local dev backend; override per environment
-// with REACT_APP_API_URL at build time (CRA inlines it), e.g.
-//   REACT_APP_API_URL=https://api-staging.busreisen.com.ua/api/admin
-// for staging, or https://api.busreisen.com.ua/api/admin for production.
+// API base URL. Defaults to the local dev backend; set REACT_APP_API_URL at
+// build time for other environments (CRA inlines it). See .env.example.
 export const API_URL =
-  process.env.REACT_APP_API_URL || 'https://localhost:5000/api/admin';
+  process.env.REACT_APP_API_URL || 'http://localhost:5000/api/admin';
 // initialize an empty api service that we'll inject endpoints into later as needed
 import type {
   BaseQueryFn,

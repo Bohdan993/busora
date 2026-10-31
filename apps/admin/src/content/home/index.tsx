@@ -27,7 +27,7 @@ function Home() {
   return (
     <HomeWrapper>
       <Helmet>
-        <title>Busreisen Адмін Панель</title>
+        <title>Busora Адмін Панель</title>
       </Helmet>
       <Container maxWidth="xl">
         <Box display="flex" justifyContent="center" py={5} alignItems="center">

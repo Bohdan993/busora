@@ -248,7 +248,7 @@ export interface ColumnDefinitionItem {
 export interface ColumnsDefinition {
   /* ... */
 }
-type CustomOrder = 'ZD' | 'DZ' | 'ZK' | 'KZ';
+type CustomOrder = 'KP' | 'PK' | 'TP' | 'PT';
 interface CustomSortingState {
   /* ... */
 }

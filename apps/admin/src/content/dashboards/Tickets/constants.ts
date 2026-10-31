@@ -12,7 +12,16 @@ export interface ColumnsDefinition {
   ticketsTable?: ColumnDefinitionItem[];
 }
 
-export type CustomOrder = 'ZD' | 'DZ' | 'ZK' | 'KZ';
+// Directions of the bus lines, by routecityorders.routeKey (see the API's
+// seed data). Sorting by one orders tickets by the city's stop on that line.
+export const ROUTE_SORT_OPTIONS = [
+  { key: 'KP', label: 'Київ - Прага' },
+  { key: 'PK', label: 'Прага - Київ' },
+  { key: 'TP', label: 'Тернопіль - Пльзень' },
+  { key: 'PT', label: 'Пльзень - Тернопіль' }
+] as const;
+
+export type CustomOrder = typeof ROUTE_SORT_OPTIONS[number]['key'];
 
 export interface CustomSortingState {
   id: string;

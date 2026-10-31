@@ -17,6 +17,12 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { Box, TextField } from '@mui/material';
 import { useHandleClickOutside } from 'src/helpers/hooks';
+import {
+  CALLING_CODE_ONLY,
+  CALLING_CODE_PREFIX,
+  PHONE_COUNTRIES,
+  countryOfPhone
+} from 'src/helpers/phone';
 import { PassengersSearchAutocomplete } from '../PassengersSearchAutocomplete';
 
 // A plain phone <input> for react-phone-number-input: just the country-code
@@ -121,22 +127,22 @@ export const MaskedPhoneInput = <TData extends MRT_RowData>({
     let next = newValue;
     // react-phone-number-input discards the national number when switching to a
     // country whose calling code differs (it returns just the new calling code,
-    // e.g. "+380"/"+49"). Detect that — calling-code-only AND the calling code
+    // e.g. "+380"/"+420"). Detect that — calling-code-only AND the calling code
     // changed vs the previous value — and re-attach the previous national digits
     // so toggling the country doesn't wipe an existing number. A user deleting
     // all digits also reaches calling-code-only, but with the SAME calling code,
     // so that still clears correctly.
-    if (/^\+(380|49)$/.test(newValue || '')) {
-      const prevCallingCode = (value || '').match(/^\+(380|49)/)?.[0];
+    if (CALLING_CODE_ONLY.test(newValue || '')) {
+      const prevCallingCode = (value || '').match(CALLING_CODE_PREFIX)?.[0];
       if (prevCallingCode && prevCallingCode !== newValue) {
-        const prevNational = (value || '').replace(/^\+(380|49)/, '');
+        const prevNational = (value || '').replace(CALLING_CODE_PREFIX, '');
         if (prevNational) next = newValue + prevNational;
       }
     }
     // Selecting a country on an empty field emits just the calling code with no
     // national number. Treat that as empty so it doesn't persist or trip
     // phone-format validation when nothing was typed.
-    const normalized = !next || /^\+(380|49)$/.test(next) ? '' : next;
+    const normalized = !next || CALLING_CODE_ONLY.test(next) ? '' : next;
     if (onChange) onChange(normalized);
     setValue(normalized);
     saveInputValueToRowCache(normalized);
@@ -179,10 +185,10 @@ export const MaskedPhoneInput = <TData extends MRT_RowData>({
         autoFocus={!isCreating}
         international
         countryCallingCodeEditable={false}
-        defaultCountry={value && value?.startsWith('+49') ? 'DE' : 'UA'}
+        defaultCountry={countryOfPhone(value).code}
         smartCaret={false}
         limitMaxLength={true}
-        countries={['UA', 'DE']}
+        countries={PHONE_COUNTRIES.map((c) => c.code)}
         // inputComponent={TextField}
         inputComponent={
           enableSearch ? PassengersSearchAutocomplete : PhoneNumberTextField
